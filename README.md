@@ -1,0 +1,122 @@
+# Ollama Backup Deluxe
+
+**Fully offline-restorable backups of your local LLM inference stack on macOS.**
+
+One tool, two functions — both available in a local web app and on the command line:
+
+1. **BACKUP MY CURRENT LOCAL INFERENCE SETUP** → a self-contained `.7z` "backup kit"
+2. **RESTORE A LOCAL INFERENCE SETUP** → rebuild everything on a fresh Mac, **zero internet**
+
+What gets captured (verified paths, see `llm-wiki/reference/paths.md`):
+
+| Component | What | Why |
+|---|---|---|
+| **Ollama** | `/Applications/Ollama.app`, `~/.ollama` (models, keys, config), `~/Library/Application Support/Ollama` (db) | app + CLI + all model weights |
+| **Pi coding agent** | `~/.pi` (managed install, settings, auth, sessions), `~/.local/bin/pi` launcher | your harness, versions pinned |
+| **Node.js** | the full Homebrew Cellar chain behind `node` **plus** the official node dist tarball | Pi's runtime; brew node is dylib-linked so a bare binary is not enough |
+| **This tool** | its own extractor (7zz), restore scripts, and a project copy | the backup restores itself — no Homebrew, no npm, no network |
+
+The archive also contains `MANIFEST.txt` (human) + `manifest.env` (machine): versions, host,
+architecture, the exact model list, sizes, and options used.
+
+---
+
+## Quick start (source Mac)
+
+```bash
+# one-time setup: installs 7zz into ./bin, caches the Node fallback tarball, audits the stack
+./scripts/prerequisites.sh
+
+# launch the web app (http://127.0.0.1:8686, local only)
+./start-webapp.sh
+```
+
+Then click **BACKUP MY CURRENT LOCAL INFERENCE SETUP**, pick a destination folder
+(e.g. an external drive), name the archive, and go. Files produced:
+
+```
+<name>.7z             the backup kit (self-contained)
+<name>.7z.sha256      checksum
+<name>.manifest.txt   readable summary (no extraction needed)
+```
+
+### CLI equivalent
+
+```bash
+scripts/backup.sh --dest /Volumes/Backup --name my-kit           # 7z level 5 (recommended)
+scripts/backup.sh --dest /Volumes/Backup --level 9               # ultra (slow, ~no gain on weights)
+scripts/backup.sh --dry-run --dest /tmp --name probe             # inspect without writing
+scripts/verify.sh                                                # audit current machine
+```
+
+## Quick start (target Mac — no internet required)
+
+1. Copy the **release bundle** (`ollama-backup-deluxe-vX.Y.Z-macos.zip` from GitHub Releases,
+   built automatically when you push a `v*` tag) **and** the `.7z` kit to the machine.
+2. Unzip the bundle, run `./start-webapp.sh`.
+   - No Node on the machine? The bundle ships official Node tarballs and extracts one to
+     `.runtime/` on first launch — completely offline.
+3. Click **RESTORE A LOCAL INFERENCE SETUP**, pick the `.7z`, confirm, watch the log.
+4. Re-enable "Start at Login" for Ollama in its settings, open Pi, run a model.
+
+### CLI restore (works even without Node)
+
+```bash
+# the kit contains its own extractor:
+#   (extract anywhere) then:
+bash restore-kit/restore.sh --archive /Volumes/Backup/my-kit.7z
+```
+
+Restore behavior: quits Ollama → **renames** existing installs aside
+(`*.pre-restore-<timestamp>`, never deletes; `--purge-existing` to opt out) → reinstalls app,
+data, Pi, and the Node chain → recreates symlinks → starts Ollama → verifies model list against
+the manifest. `/usr/local/bin` needs an admin password once (macOS GUI prompt).
+
+---
+
+## The web app
+
+- Binds to `127.0.0.1:8686` only. **Zero npm dependencies** — nothing to install, ever.
+- Server-backed file explorer for choosing destinations and archives (works in any browser).
+- Live job log with cancel; archive preview (versions + model count) before restoring.
+- Jobs are also tee'd to `logs/`.
+
+## Compression note
+
+Default is 7-Zip level **5** ("normal" — the recommended setting). Model weights are
+high-entropy binary data; level 9 spends hours for ~1–2 % on a 60 GB library. Levels 0–9 are
+selectable in the UI / `--level` if you want to trade time anyway.
+
+## Development
+
+```bash
+tests/run-tests.sh              # all suites (bash e2e + webapp node:test)
+tests/run-tests.sh --list       # list suites
+shellcheck scripts/*.sh         # lint (CI enforces)
+```
+
+Sandbox contract: every path is overridable via `OBD_*` env vars (`scripts/common.sh`), and
+`OBD_DEST_PREFIX` redirects all restore destinations — that's how the full backup→restore cycle
+is tested end-to-end without touching the real install. See
+`docs/plans/2026-10-12-initial-implementation-plan.md` for the design (§8 tests, §9 CI/CD, §4b release bundle).
+
+### CI/CD
+
+- **Every PR / push to main** → ShellCheck + unit + e2e + webapp + release-smoke (`.github/workflows/ci.yml`)
+- **Tag `v*`** → full suite, then the release bundle is built and attached to a GitHub Release (`release.yml`)
+- **Push to main** → llm-wiki + docs published to GitHub Pages (`pages.yml`)
+
+```bash
+git tag v1.0.0 && git push origin v1.0.0    # → release CI builds the bundle
+```
+
+## Security notes
+
+- The kit contains `~/.ollama/id_ed25519` and Pi's `auth.json` (API keys). **Keep backup media
+  encrypted** (FileVault'd disk or `7z -p` via `scripts/backup.sh --help` customization).
+- The web app listens on localhost only and runs scripts as your user — treat it like a terminal.
+
+## License
+
+GPLv3 — see `LICENSE`. 7-Zip (LGPL/BSD) and Node.js (MIT) are downloaded at setup time from
+their official releases; nothing is redistributed in this repository.

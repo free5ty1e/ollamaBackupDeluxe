@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ollama Backup Deluxe</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header>
+  <div class="brand">
+    <span class="logo">⟐</span>
+    <div>
+      <h1>Ollama Backup Deluxe</h1>
+      <p class="sub">Fully offline-restorable backups of your local inference stack</p>
+    </div>
+  </div>
+  <div id="system-pills" class="pills"></div>
+</header>
+
+<main>
+  <section class="hero">
+    <button id="btn-backup" class="action backup">
+      <span class="icon">⬇</span>
+      <span class="label">BACKUP MY CURRENT LOCAL INFERENCE SETUP</span>
+      <span class="hint">Create a self-contained .7z backup kit</span>
+    </button>
+    <button id="btn-restore" class="action restore">
+      <span class="icon">⬆</span>
+      <span class="label">RESTORE A LOCAL INFERENCE SETUP</span>
+      <span class="hint">Reinstall everything from an existing backup kit</span>
+    </button>
+  </section>
+
+  <section id="job-panel" class="panel hidden">
+    <div class="panel-head">
+      <span id="job-title">Job</span>
+      <span id="job-status" class="pill idle">idle</span>
+      <button id="btn-cancel" class="btn small danger">Cancel</button>
+    </div>
+    <pre id="job-log" class="log"></pre>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><span>Detected system</span>
+      <button id="btn-refresh" class="btn small">Refresh</button>
+    </div>
+    <div id="system-info" class="sysgrid"><em>Loading…</em></div>
+  </section>
+</main>
+
+<!-- Backup modal -->
+<div id="modal-backup" class="modal hidden">
+  <div class="dialog">
+    <h2>Back up my current setup</h2>
+    <label>Destination folder</label>
+    <div class="pathrow">
+      <input id="bk-dest" type="text" spellcheck="false" placeholder="/Volumes/…">
+      <button class="btn" data-explorer="bk-dest" data-mode="dir">Browse…</button>
+    </div>
+    <label>Backup name</label>
+    <input id="bk-name" type="text" spellcheck="false" placeholder="ollama-backup-YYYYMMDD-HHMMSS">
+    <div class="optrow">
+      <label class="opt">Compression level
+        <select id="bk-level">
+          <option value="0">0 — store (fastest, no compression)</option>
+          <option value="3">3 — fast</option>
+          <option value="5" selected>5 — recommended (default)</option>
+          <option value="7">7 — high (slow)</option>
+          <option value="9">9 — ultra (very slow, marginal gains)</option>
+        </select>
+      </label>
+      <label class="opt check"><input id="bk-nodedist" type="checkbox" checked> Include Node.js fallback runtime</label>
+      <label class="opt check"><input id="bk-logs" type="checkbox" checked> Include logs</label>
+    </div>
+    <p class="note">The archive contains its own extractor + restore scripts — restorable with no internet.
+    Model weights are already-compressed data; higher levels mostly waste time.</p>
+    <div class="dialog-actions">
+      <button class="btn" data-close>Cancel</button>
+      <button id="bk-start" class="btn primary">Start backup</button>
+    </div>
+  </div>
+</div>
+
+<!-- Restore modal -->
+<div id="modal-restore" class="modal hidden">
+  <div class="dialog">
+    <h2>Restore a local inference setup</h2>
+    <label>Backup archive (.7z)</label>
+    <div class="pathrow">
+      <input id="rs-archive" type="text" spellcheck="false" placeholder="/Volumes/…/ollama-backup-….7z">
+      <button class="btn" data-explorer="rs-archive" data-mode="file">Browse…</button>
+    </div>
+    <div id="rs-info" class="archive-info hidden"></div>
+    <p class="note warn">Existing installations are renamed aside (<code>*.pre-restore-…</code>), never deleted.
+    Ollama will be quit during restore and restarted afterwards.</p>
+    <div class="dialog-actions">
+      <button class="btn" data-close>Cancel</button>
+      <button id="rs-start" class="btn primary" disabled>Start restore</button>
+    </div>
+  </div>
+</div>
+
+<!-- File explorer modal -->
+<div id="modal-explorer" class="modal hidden">
+  <div class="dialog wide">
+    <h2 id="ex-title">Choose…</h2>
+    <div class="pathrow"><input id="ex-path" type="text" spellcheck="false">
+      <button id="ex-go" class="btn">Go</button>
+      <button id="ex-up" class="btn">↑ Up</button></div>
+    <div id="ex-list" class="explorer"></div>
+    <div class="dialog-actions">
+      <button class="btn" data-close>Cancel</button>
+      <button id="ex-select" class="btn primary">Use this folder</button>
+    </div>
+  </div>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>

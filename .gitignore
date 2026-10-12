@@ -1,0 +1,22 @@
+# Binaries fetched at setup time (7zz, node dist tarballs) — not committed
+/bin/
+/cache/
+
+# Job logs and archives
+/logs/
+*.7z
+*.sha256
+*.manifest.txt
+
+# Project-local junk
+.DS_Store
+*.log
+/tmp/
+
+# Release build output and test scratch
+/dist/
+/tests/.tmp/
+.runtime/
+
+# Obsidian workspace (local UI state, not knowledge)
+llm-wiki/.obsidian/

@@ -1,0 +1,58 @@
+name: Pages (llm-wiki + docs)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Stage Pages site (GitHub Pages renders Markdown via Jekyll)
+        run: |
+          mkdir -p site
+          cp -r llm-wiki site/llm-wiki
+          cp -r docs site/docs
+          cp README.md AGENTS.md site/ 2>/dev/null || true
+          cat > site/_config.yml <<'EOF'
+          title: Ollama Backup Deluxe
+          theme: jekyll-theme-cayman
+          markdown: kramdown
+          EOF
+          cat > site/index.md <<'EOF'
+          # Ollama Backup Deluxe — knowledge base
+
+          Fully offline-restorable backups of the local LLM inference stack
+          (Ollama + Pi + Node) on macOS.
+
+          ## Start here
+          - [Implementation plan](docs/plans/2026-10-12-initial-implementation-plan.md)
+          - [llm-wiki index](llm-wiki/index.md)
+          - [Offline restore runbook](llm-wiki/runbooks/offline-restore.md)
+
+          Everything under `llm-wiki/` is an LLM-maintained knowledge base
+          following the [LLM wiki pattern](llm-wiki/sources/llm-wiki-pattern.md).
+          EOF
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint:
+    name: ShellCheck + syntax
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: shellcheck
+        run: |
+          shellcheck -x scripts/*.sh tests/run-tests.sh tests/unit/*.sh tests/lib/*.sh
+      - name: bash -n (syntax)
+        run: |
+          for f in scripts/*.sh tests/run-tests.sh tests/unit/*.sh tests/lib/*.sh; do
+            bash -n "$f"
+          done
+
+  unit-and-e2e:
+    name: Unit + e2e suites (macOS)
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install 7zz (prerequisites)
+        run: ./scripts/prerequisites.sh
+      - name: Run bash test suites
+        run: tests/run-tests.sh
+
+  webapp:
+    name: Web app tests (node:test)
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install 7zz (prerequisites)
+        run: ./scripts/prerequisites.sh
+      - name: node --test
+        run: node --test tests/webapp/
+
+  release-smoke:
+    name: Release bundle smoke test
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build release bundle (needs network for 7zz + node tarballs)
+        run: ./scripts/build-release.sh --version 0.0.0-smoke
+      - name: Unpack and boot web app headless
+        run: |
+          cd dist
+          unzip -q ollama-backup-deluxe-v0.0.0-smoke-macos.zip -d /tmp/release
+          cd /tmp/release/ollama-backup-deluxe-v0.0.0-smoke-macos
+          # headless boot: no `open` in CI; start server directly with bundled runtime
+          ARCH=$(uname -m); [[ "$ARCH" == "arm64" ]] || ARCH=x64
+          mkdir -p .runtime
+          tar -xf runtime/node-v*-darwin-${ARCH}.tar.* -C .runtime
+          mv .runtime/node-v*-darwin-* .runtime/node-current
+          NODE_BIN="$PWD/.runtime/node-current/bin/node" OBD_PORT=8765 \
+            nohup "$PWD/.runtime/node-current/bin/node" webapp/server.js &
+          sleep 3
+          curl -fsS http://127.0.0.1:8765/api/system | grep -q '"sevenZip"' && echo "web app OK"
+          curl -fsS http://127.0.0.1:8765/ | grep -q "Ollama Backup Deluxe" && echo "UI OK"
