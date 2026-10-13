@@ -1,0 +1,75 @@
+# Update PR Description
+
+Update the current open PR's description to reflect the latest project state.
+
+## Step 1: Find the open PR
+
+```bash
+gh pr list --state open --json number,title --jq '.[] | "PR #\(.number): \(.title)"'
+```
+
+Pick the single open PR from the output. If there are multiple, ask the user which one.
+
+## Step 2: Download the current description
+
+Replace `<PR_NUMBER>` with the actual PR number found above:
+
+```bash
+mkdir -p /workspace/.pr_temp
+gh pr view <PR_NUMBER> --json body --jq '.body' > /workspace/.pr_temp/current_pr_description.md
+```
+
+## Step 3: Read and understand the current description
+
+Read the downloaded file. Note the existing structure, sections, and tone.
+
+## Step 4: Check what has changed
+
+Gather current project state:
+- Plugin version: `PLUGIN_VERSION` in `beat_saber_deluxe/src/main.cpp`
+- Pipeline version: `beat_saber_deluxe/VERSION`
+- Song list: `beat_saber_deluxe/deploy_all.sh` targets
+- Test count: `cd beat_saber_deluxe && python3 -m pytest tests/ --co -q 2>/dev/null | tail -1`
+- CI workflows: `.github/workflows/`
+
+## Step 5: Create the updated description
+
+Copy the original to the updated file, then make **surgical edits** (not a full rewrite):
+
+```bash
+cp /workspace/.pr_temp/current_pr_description.md /workspace/.pr_temp/updated_pr_description.md
+```
+
+Use the `Edit` tool to change only the specific lines that need updating. This keeps the diff readable and preserves all existing formatting.
+
+Things to update:
+- Version numbers (plugin and pipeline)
+- Song list (new packs, new slots)
+- Feature descriptions (new flags, new commands)
+- Test count and CI status
+- Limitations section
+
+## Step 6: Generate and review the diff
+
+```bash
+diff -u /workspace/.pr_temp/current_pr_description.md /workspace/.pr_temp/updated_pr_description.md > /workspace/.pr_temp/pr_description_diff.md
+```
+
+Present to the user:
+- **Current:** `/workspace/.pr_temp/current_pr_description.md`
+- **Updated:** `/workspace/.pr_temp/updated_pr_description.md`
+- **Diff:** `/workspace/.pr_temp/pr_description_diff.md`
+
+Summarize what changed. Wait for user approval before pushing.
+
+## Step 7: Push the update (only after user says "approved")
+
+**CRITICAL — use `--raw-field`, never `--field` or `json.dumps`:**
+- `--field` wraps values in JSON quotes and escapes special chars, which double-encodes and breaks markdown formatting
+- `--raw-field` sends the raw string as-is, preserving all newlines and markdown
+
+```bash
+gh api repos/free5ty1e/BeatSaberPcCustomSongToPs4InstallConverter/pulls/<PR_NUMBER> --method PATCH --raw-field body="$(cat /workspace/.pr_temp/updated_pr_description.md)"
+```
+
+Do NOT use `python3 json.dumps()` to encode the body — it adds extra JSON escaping that corrupts the markdown.

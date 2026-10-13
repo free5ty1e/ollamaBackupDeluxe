@@ -3,6 +3,12 @@
 Catalog of the wiki. One line per page. The LLM updates this on every ingest; read it first
 when answering queries. (Pattern source: [[sources/llm-wiki-pattern]].)
 
+## ⭐ START HERE
+
+- [[introduction]] — **the initial prompt / briefing for any new agent or developer**: what the
+  project is, why it exists, how it is used, structure, where everything lives, and the first
+  five actions to take. New sessions should read this before anything else.
+
 ## Meta
 
 - [[SCHEMA]] — operating manual for maintaining this wiki.

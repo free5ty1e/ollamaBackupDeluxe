@@ -1,5 +1,8 @@
 # AGENTS.md — Ollama Backup Deluxe
 
+> **New to this repository?** Read `llm-wiki/introduction.md` first — it is the briefing /
+> initial prompt: project purpose, structure, current state, and your first five actions.
+
 ## Repository rules (binding for every session)
 
 ### Git workflow — STRICT

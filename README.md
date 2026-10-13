@@ -124,6 +124,12 @@ Default is 7-Zip level **5** ("normal" — the recommended setting). Model weigh
 high-entropy binary data; level 9 spends hours for ~1–2 % on a 60 GB library. Levels 0–9 are
 selectable in the UI / `--level` if you want to trade time anyway.
 
+## For agents and developers
+
+`llm-wiki/introduction.md` is the briefing document — it doubles as an initial prompt for any
+coding agent joining the project (purpose, structure, binding rules, first five actions). The
+knowledge base under `llm-wiki/` is maintained by the coding agent per its `SCHEMA.md`.
+
 ## Development
 
 ```bash

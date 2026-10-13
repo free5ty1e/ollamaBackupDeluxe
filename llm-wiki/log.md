@@ -61,3 +61,10 @@ Append-only. Format: `## [YYYY-MM-DD] <op> | <title>` — parseable with
 - pages.yml rewritten (app at root, Jekyll renders knowledge base); server.js gained CORS +
   OPTIONS preflight handling; guide/connected banners in the UI.
 - Tests: webapp suite +2 (CORS preflight, relative assets + guide markup). 181 + 10 green.
+
+## [2026-10-12] ingest | introduction.md — the wiki's entry-point briefing
+- Added [[introduction]] as the initial prompt for any new agent/developer: project, purpose,
+  usage paths (source-mac backup, fresh-mac restore, devcontainer, verify), repo structure,
+  pointers (AGENTS.md rules, plan, README, wiki pages), current state, first five actions.
+- index.md now lists it under a ⭐ START HERE section at the top; SCHEMA page map and AGENTS.md
+  point to it as well.

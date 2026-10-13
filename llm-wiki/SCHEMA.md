@@ -15,6 +15,7 @@ the LLM writes and maintains all of it; the human sources, explores, and asks.
 
 | Page | Purpose |
 |---|---|
+| [[introduction]] | ⭐ the initial prompt / briefing — new agents and developers START HERE |
 | [[index]] | catalog of every page, one line each — read FIRST when answering queries |
 | [[log]] | append-only chronological record (ingests, builds, restores, lint passes) |
 | [[overview]] | what this system is, the thesis, current state |
