@@ -53,7 +53,7 @@ test.before(async () => {
   PORT = 18000 + Math.floor(Math.random() * 2000);
   server = spawn(process.execPath, [path.join(ROOT, 'webapp', 'server.js')], {
     env: {
-      ...process.env, OBD_PORT: String(PORT),
+      ...process.env, OBD_PORT: String(PORT), OBD_ALLOWED_ORIGIN: 'https://test.github.io',
       OBD_HOME: path.join(TMP, 'fix', 'fake-home'),
       OBD_OLLAMA_APP: path.join(TMP, 'fix', 'Applications', 'Ollama.app'),
       OBD_OLLAMA_HOME: path.join(TMP, 'fix', 'fake-home', '.ollama'),
@@ -145,6 +145,30 @@ test('POST /api/backup runs the real backup script to completion', async () => {
 test('POST /api/job/cancel with no running job → 400', async () => {
   const r = await req(PORT, 'POST', '/api/job/cancel');
   assert.equal(r.status, 400);
+});
+
+test('CORS: allowed origin echoed on API + preflight works', async () => {
+  const r = await req(PORT, 'GET', '/api/system');
+  assert.equal(r.status, 200);
+  const headers = await new Promise((resolve, reject) => {
+    const rq = http.request({ host: '127.0.0.1', port: PORT, path: '/api/system', method: 'GET' }, (res) => resolve(res.headers));
+    rq.on('error', reject); rq.end();
+  });
+  assert.equal(headers['access-control-allow-origin'], 'https://test.github.io');
+  const pre = await new Promise((resolve, reject) => {
+    const rq = http.request({ host: '127.0.0.1', port: PORT, path: '/api/system', method: 'OPTIONS' }, (res) => resolve(res));
+    rq.on('error', reject); rq.end();
+  });
+  assert.equal(pre.statusCode, 204);
+  assert.equal(pre.headers['access-control-allow-methods'], 'GET, POST');
+});
+
+test('Static UI: relative assets + guide markup present (Pages-compatible)', async () => {
+  const r = await req(PORT, 'GET', '/');
+  assert.ok(r.text.includes('href="style.css"'), 'stylesheet referenced relatively');
+  assert.ok(r.text.includes('src="app.js"'), 'app.js referenced relatively');
+  assert.ok(r.text.includes('id="guide-panel"'), 'guide panel present');
+  assert.ok(r.text.includes('id="connected-banner"'), 'connected banner present');
 });
 
 test('GET /api/archive-info on non-archive → error field', async () => {

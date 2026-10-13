@@ -1,6 +1,87 @@
-/* Ollama Backup Deluxe — UI logic (no dependencies) */
+/* Ollama Backup Deluxe — UI logic (no dependencies).
+ * Runs in three modes (auto-detected at startup):
+ *  - local:    same origin as the engine (server.js)          → full function
+ *  - remote:   hosted elsewhere (GitHub Pages) but the local
+ *              engine allows this origin via OBD_ALLOWED_ORIGIN → full function
+ *  - guide:    static copy with no engine reachable             → setup walkthrough
+ */
 'use strict';
 const $ = (id) => document.getElementById(id);
+const API_BASE = (typeof OBD_API_BASE !== 'undefined') ? OBD_API_BASE : '';
+const LOCAL_ENGINES = ['http://127.0.0.1:8686', 'http://localhost:8686'];
+let ENGINE_MODE = 'detecting';   // local | remote | guide
+let engineProbeTimer = null;
+
+function repoUrl() {
+  if (typeof OBD_REPO_URL !== 'undefined' && OBD_REPO_URL) return OBD_REPO_URL;
+  // project Pages: https://owner.github.io/repo/… → derive; custom domains: give up gracefully
+  const h = location.hostname;
+  if (h.endsWith('.github.io') && location.pathname.split('/')[1]) {
+    return `https://github.com/${h.split('.')[0]}/${location.pathname.split('/')[1]}`;
+  }
+  return null;
+}
+
+async function probeEngine(base) {
+  try {
+    const r = await fetch(base + 'api/system', { headers: { Accept: 'application/json' } });
+    if (!r.ok) return false;
+    const j = await r.json();
+    return !!(j && j.components);
+  } catch { return false; }
+}
+
+async function resolveEngine() {
+  if (await probeEngine('')) { setEngineMode('local', ''); return; }
+  if (!/^(127\.0\.0\.1|localhost)$/.test(location.hostname)) {
+    for (const base of LOCAL_ENGINES) {
+      if (await probeEngine(base + '/')) { setEngineMode('remote', base); return; }
+    }
+  }
+  setEngineMode('guide', '');
+}
+
+function setEngineMode(mode, base) {
+  ENGINE_MODE = mode;
+  window.__API_BASE = base;
+  if (engineProbeTimer) { clearInterval(engineProbeTimer); engineProbeTimer = null; }
+  if (mode === 'guide') {
+    showGuide();
+    $('btn-backup').disabled = $('btn-restore').disabled = true;
+    engineProbeTimer = setInterval(resolveEngine, 8000);  // auto-connect once the user starts the app
+  } else {
+    hideGuide();
+    $('btn-backup').disabled = $('btn-restore').disabled = false;
+    if (mode === 'remote') showConnectedBanner(base);
+    refreshSystem();
+  }
+}
+
+function showGuide() {
+  const g = $('guide-panel');
+  if (!g) return;
+  g.classList.remove('hidden');
+  const ru = repoUrl();
+  const dl = document.getElementById('guide-download');
+  if (dl) {
+    if (ru) { dl.href = ru + '/releases/latest'; dl.classList.remove('hidden'); }
+    else dl.classList.add('hidden');
+  }
+  const originLine = document.getElementById('guide-origin');
+  if (originLine) originLine.textContent = location.origin;
+  refreshSystem();
+}
+
+function hideGuide() { const g = $('guide-panel'); if (g) g.classList.add('hidden'); }
+
+function showConnectedBanner(base) {
+  const b = $('connected-banner');
+  if (!b) return;
+  b.classList.remove('hidden');
+  $('connected-host').textContent = base.replace(/\/$/, '');
+  hideGuide();
+}
+
 const humanSize = (kb) => {
   if (kb == null) return '—';
   let b = kb * 1024, u = ['B', 'KB', 'MB', 'GB', 'TB'], i = 0;
@@ -9,7 +90,8 @@ const humanSize = (kb) => {
 };
 
 async function api(path, opts) {
-  const r = await fetch(path, opts);
+  const base = window.__API_BASE || API_BASE || '';
+  const r = await fetch(base + path, opts);
   const body = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(body.error || `HTTP ${r.status}`);
   return body;
@@ -43,7 +125,13 @@ async function refreshSystem() {
       item('7-Zip', c.sevenZip.present ? c.sevenZip.path : 'missing — click Cancel & run scripts/prerequisites.sh') +
       item('Free disk (project volume)', humanSize(s.diskFreeKb)) +
       item('Project', s.project);
-  } catch (e) { $('system-pills').innerHTML = `<span class="pill bad">API error: ${e.message}</span>`; }
+  } catch (e) {
+    if (ENGINE_MODE === 'guide') {
+      $('system-pills').innerHTML = '<span class="pill idle">static copy — no engine connected</span>';
+    } else {
+      $('system-pills').innerHTML = `<span class="pill bad">API error: ${e.message}</span>`;
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -226,4 +314,4 @@ $('ex-up').onclick = () => browse(exState.parent || exState.here);
 $('ex-path').addEventListener('keydown', (e) => { if (e.key === 'Enter') browse($('ex-path').value.trim()); });
 
 // ---------------------------------------------------------------------------
-refreshSystem();
+resolveEngine();

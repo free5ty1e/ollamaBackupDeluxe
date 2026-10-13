@@ -104,6 +104,20 @@ password once (macOS GUI prompt).
 - Live job log with cancel; archive preview (versions + model count) before restoring.
 - Jobs are also tee'd to `logs/`.
 
+### GitHub Pages copy (static)
+
+The project's Pages site serves the **same UI** (relative assets, three auto-detected modes):
+
+1. **Local** — opened from the engine itself: full function.
+2. **Remote** — the Pages UI *drives your local engine* if you start it with
+   `OBD_ALLOWED_ORIGIN="https://<owner>.github.io" ./start-webapp.sh`
+   (a green "connected" banner appears; never set the origin to `*`).
+3. **Guide** — no engine reachable: a setup walkthrough with a direct
+   **Download the latest release** link, the two-line start command, and the wiki/docs beside it.
+
+Pages deploys on every push to `main` (`.github/workflows/pages.yml`); the app UI is served at
+the site root with `llm-wiki/` and `docs/` rendered beside it.
+
 ## Compression note
 
 Default is 7-Zip level **5** ("normal" — the recommended setting). Model weights are

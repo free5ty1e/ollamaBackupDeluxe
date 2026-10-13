@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ollama Backup Deluxe</title>
-<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 <header>
@@ -19,6 +19,32 @@
 </header>
 
 <main>
+  <section id="connected-banner" class="banner ok hidden">
+    <span>⚡ Connected to your local engine at <b id="connected-host"></b> — full functionality below.</span>
+  </section>
+
+  <section id="guide-panel" class="panel guide hidden">
+    <div class="panel-head"><span>Static copy — the backup/restore engine runs on your Mac</span></div>
+    <div class="guide-body">
+      <p>For security, no web page can read your disk or run scripts — the backup engine is a
+      small local app. Setup takes about a minute:</p>
+      <ol class="steps">
+        <li><a id="guide-download" class="btn primary hidden" href="#">⬇ Download the latest release</a>
+            <span id="guide-nodl" class="muted">Grab the latest <code>ollama-backup-deluxe-vX-macos.zip</code> from this project's GitHub Releases.</span></li>
+        <li>Unzip it, then in Terminal:
+          <pre class="log inline">cd ollama-backup-deluxe-v*-macos
+./start-webapp.sh</pre></li>
+        <li>The local app opens at <a href="http://127.0.0.1:8686">http://127.0.0.1:8686</a> —
+            this page will connect to it automatically within a few seconds.</li>
+      </ol>
+      <p class="note">Optional — let <b>this hosted page</b> control your local engine (instead of using the local
+      copy of the UI): quit the local app and restart it with
+      <pre class="log inline">OBD_ALLOWED_ORIGIN="<span id="guide-origin"></span>" ./start-webapp.sh</pre>
+      then reload this page. Only set that origin to this site.</p>
+      <p class="note muted">Knowledge base: <a href="llm-wiki/">llm-wiki/</a> · plans under <a href="docs/">docs/</a></p>
+    </div>
+  </section>
+
   <section class="hero">
     <button id="btn-backup" class="action backup">
       <span class="icon">⬇</span>
@@ -128,6 +154,7 @@
   </div>
 </div>
 
-<script src="/app.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
 </body>
 </html>

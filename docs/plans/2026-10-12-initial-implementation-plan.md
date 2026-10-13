@@ -366,11 +366,13 @@ Notes: public repo ⇒ macOS runners are free; scripts only need bash + system t
 
 ### `.github/workflows/pages.yml` — push to main
 
-Publishes the **llm-wiki + docs** as a browsable GitHub Pages site:
-1. Stage `llm-wiki/**`, `docs/**`, `README.md` into `pages/` with a Jekyll-compatible `_config.md`
-   (GitHub Pages renders Markdown natively — no npm toolchain needed)
-2. Generate `pages/index.md` table of contents from `llm-wiki/index.md`
-3. `actions/upload-pages-artifact` + `actions/deploy-pages`
+Publishes the **web app UI at the site root** plus **llm-wiki + docs** as a browsable site:
+1. Stage `webapp/public/*` at the site root (relative assets; UI auto-detects engine presence),
+   `llm-wiki/**`, `docs/**`, `README.md`; bake `config.js` with the repo URL (release links)
+2. Jekyll renders the markdown; app files pass through verbatim
+3. UI modes: local (same-origin engine) / remote (Pages UI drives the local engine via
+   opt-in `OBD_ALLOWED_ORIGIN` CORS) / guide (setup walkthrough + latest-release download)
+4. `actions/upload-pages-artifact` + `actions/deploy-pages`
 
 ### Tagging a release (human workflow)
 

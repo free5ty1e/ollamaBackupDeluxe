@@ -16,6 +16,10 @@ const PUBLIC = path.join(__dirname, 'public');
 const LOG_DIR = path.join(PROJECT_DIR, 'logs');
 const PORT = Number(process.env.OBD_PORT || 8686);
 const HOST = '127.0.0.1';
+// Opt-in cross-origin engine access: set OBD_ALLOWED_ORIGIN to the Pages origin
+// (e.g. https://free5ty1e.github.io) to let the hosted UI drive this local engine.
+// Never set it to '*'. Unset = same-origin only.
+const ALLOWED_ORIGIN = process.env.OBD_ALLOWED_ORIGIN || '';
 
 fs.mkdirSync(LOG_DIR, { recursive: true });
 
@@ -211,6 +215,18 @@ function startJob(type, args) {
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${HOST}:${PORT}`);
   const p = url.pathname;
+  if (ALLOWED_ORIGIN && p.startsWith('/api/')) {
+    res.setHeader('Access-Control-Allow-Origin', ALLOWED_ORIGIN);
+    res.setHeader('Vary', 'Origin');
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204, {
+        'Access-Control-Allow-Methods': 'GET, POST',
+        'Access-Control-Allow-Headers': 'Content-Type, Accept',
+        'Access-Control-Max-Age': '600',
+      });
+      return res.end();
+    }
+  }
   try {
     if (p === '/api/system') return json(res, 200, await apiSystem());
     if (p === '/api/browse') return json(res, 200, apiBrowse(url.searchParams));

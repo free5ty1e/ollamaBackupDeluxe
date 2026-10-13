@@ -32,6 +32,22 @@ Two hero buttons (BACKUP / RESTORE) → modal dialogs with the embedded explorer
 pill + cancel. System panel with detected versions/sizes and a prerequisites hint when 7zz is
 missing. Jobs disable both buttons while running.
 
+## Hosting modes (GitHub Pages + local engine)
+
+The same static files serve three auto-detected modes (see `app.js` `resolveEngine`):
+
+- **local** — same origin as `server.js`; `API_BASE = ''`.
+- **remote** — the Pages UI (relative assets, so it works under the `/repo/` subpath) probes
+  `http://127.0.0.1:8686` + `http://localhost:8686`; if the local engine was started with
+  `OBD_ALLOWED_ORIGIN="<pages origin>"` (CORS, opt-in, never `*`), the hosted UI drives it fully
+  (system panel, browse, jobs). A green "connected" banner replaces the guide.
+- **guide** — no engine reachable: setup walkthrough (release download link baked via
+  `config.js` → `OBD_REPO_URL` at Pages build time, start command, localhost link); retries the
+  probe every 8 s and auto-connects once the user starts the app.
+
+Security: CORS is opt-in per origin (`OBD_ALLOWED_ORIGIN`); unset = same-origin only. Mixed
+content is fine — browsers treat `http://127.0.0.1` as trustworthy even from `https` pages.
+
 ## Testability
 
 `tests/webapp/server.test.js` (node:test) spawns the real server with `OBD_*` sandbox env so the

@@ -53,6 +53,14 @@ Every path is overridable; restore accepts `OBD_DEST_PREFIX`. This converts "bac
 machine" into a testable product (106 automated checks run against fixtures, CI on GitHub
 macOS runners). See [[reference/paths]].
 
+## D16 — GitHub Pages: static UI with engine auto-detection
+Pages can't run the engine (no server-side execution, no filesystem/process access from a web
+page) — so the Pages site serves the SAME UI files (relative assets) with three modes: local,
+remote (opt-in `OBD_ALLOWED_ORIGIN` CORS lets the hosted UI drive the local engine — per-origin,
+never `*`), and guide (release download walkthrough, repo URL baked at build time). Rejected:
+reimplementing engine features in the browser (FS/process access is impossible), bundling a JS
+.7z parser (heavy, low value vs. the guide).
+
 ## D15 — Devcontainer kit: separate tar.gz, captured on the host (no example container needed)
 `ollama launch <integration>` needs the harness binaries ON the machine running the CLI — so a
 devcontainer using this Mac's Ollama over the network needs Linux builds of ollama CLI + the

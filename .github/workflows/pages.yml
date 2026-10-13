@@ -1,4 +1,4 @@
-name: Pages (llm-wiki + docs)
+name: Pages (web app + llm-wiki + docs)
 
 on:
   push:
@@ -19,30 +19,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Stage Pages site (GitHub Pages renders Markdown via Jekyll)
+      - name: Stage Pages site
         run: |
           mkdir -p site
+          # The web app UI at the site root (relative assets, same files the
+          # local server serves). Without a backend it runs in guide mode and
+          # walks the user through the latest release; with OBD_ALLOWED_ORIGIN
+          # set on the local engine, this hosted UI drives that engine fully.
+          cp -r webapp/public/. site/
+          # Knowledge base + docs beside the app
           cp -r llm-wiki site/llm-wiki
           cp -r docs site/docs
           cp README.md AGENTS.md site/ 2>/dev/null || true
+          # Bake the repo URL so guide-mode download links are always right
+          cat > site/config.js <<EOF
+          window.OBD_REPO_URL = "https://github.com/${{ github.repository }}";
+          EOF
+          # Jekyll renders the markdown knowledge base; the app files pass through verbatim
           cat > site/_config.yml <<'EOF'
           title: Ollama Backup Deluxe
           theme: jekyll-theme-cayman
           markdown: kramdown
-          EOF
-          cat > site/index.md <<'EOF'
-          # Ollama Backup Deluxe — knowledge base
-
-          Fully offline-restorable backups of the local LLM inference stack
-          (Ollama + Pi + Node) on macOS.
-
-          ## Start here
-          - [Implementation plan](docs/plans/2026-10-12-initial-implementation-plan.md)
-          - [llm-wiki index](llm-wiki/index.md)
-          - [Offline restore runbook](llm-wiki/runbooks/offline-restore.md)
-
-          Everything under `llm-wiki/` is an LLM-maintained knowledge base
-          following the [LLM wiki pattern](llm-wiki/sources/llm-wiki-pattern.md).
           EOF
       - uses: actions/upload-pages-artifact@v3
         with:

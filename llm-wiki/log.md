@@ -52,3 +52,12 @@ Append-only. Format: `## [YYYY-MM-DD] <op> | <title>` — parseable with
   target select (machine/devcontainer). Tests +33 (fake payloads, no downloads). 179 total green.
 - Gotchas fixed: OBD_CACHE_DIR not overridable; bash globs skip dotfiles (home-shell); tar lost
   exec bit on fake payloads (chmod defensively after extraction).
+
+## [2026-10-12] build | GitHub Pages web app deployment
+- Pages now deploys the web app UI at the site root (same public/ files, relative assets) with
+  llm-wiki + docs beside it; config.js bakes the repo URL for guide-mode release links.
+- UI auto-detects three modes: local / remote (Pages UI drives local engine via opt-in
+  OBD_ALLOWED_ORIGIN CORS — per-origin, never *) / guide (setup walkthrough, 8s auto-connect).
+- pages.yml rewritten (app at root, Jekyll renders knowledge base); server.js gained CORS +
+  OPTIONS preflight handling; guide/connected banners in the UI.
+- Tests: webapp suite +2 (CORS preflight, relative assets + guide markup). 181 + 10 green.
