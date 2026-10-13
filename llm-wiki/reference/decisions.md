@@ -53,6 +53,29 @@ Every path is overridable; restore accepts `OBD_DEST_PREFIX`. This converts "bac
 machine" into a testable product (106 automated checks run against fixtures, CI on GitHub
 macOS runners). See [[reference/paths]].
 
+## D15 — Devcontainer kit: separate tar.gz, captured on the host (no example container needed)
+`ollama launch <integration>` needs the harness binaries ON the machine running the CLI — so a
+devcontainer using this Mac's Ollama over the network needs Linux builds of ollama CLI + the
+harnesses, but NOT the 61 GB of models. Capturing on the macOS host beats building "on an example
+devcontainer": the payloads are static official downloads (curl+tar handle them from macOS), and
+the example container ships as a *validation* tool instead (`devcontainer/`). Separate plain
+`tar.gz` artifact (not inside the .7z) so a fresh container can open it with built-in tar and find
+its own bundled Linux 7zz — no chicken-and-egg. glibc payloads; Alpine unsupported (documented).
+
+## D13 — Capture shell rc files for PATH wiring
+Launchers (pi, claude) and OpenCode are unreachable without PATH entries that installers wrote
+into `~/.zshrc`. The kit stages real copies of `.zshrc/.zprofile/.zshenv/.bashrc/.bash_profile`;
+restore fills gaps only and writes `<name>.obd-backup` when a file exists (merge manually).
+Never clobber a live rc.
+
+## D14 — Harness coverage: Pi + Claude Code + OpenCode
+All three harnesses work with local models; a fresh machine should boot with all of them.
+Claude's native runtime is self-contained (no node), OpenCode is a single binary — neither adds
+runtime prerequisites. Claude's absolute launcher symlink is remapped through the destination
+mapping at restore ([[components/claude]]). OpenCode's config dir lives in the shared
+`~/.config` (also home to other apps) → **selective slice staging**, never the whole dir.
+OpenCode's plugin `node_modules` (61 MB × 2) IS included: offline reinstall would need npm.
+
 ## D12 — Exclude ephemera
 `~/.ollama/cache`, `~/.pi/agent/install/staging`, pid files: regenerable, and staging can hold
 multi-MB partial downloads. Logs optional (default included — small and useful post-restore).

@@ -71,6 +71,7 @@
         </select>
       </label>
       <label class="opt check"><input id="bk-nodedist" type="checkbox" checked> Include Node.js fallback runtime</label>
+      <label class="opt check"><input id="bk-dc" type="checkbox" checked> Build devcontainer kit (Linux payloads — for containers that use this Mac's Ollama over the network)</label>
       <label class="opt check"><input id="bk-logs" type="checkbox" checked> Include logs</label>
     </div>
     <p class="note">The archive contains its own extractor + restore scripts — restorable with no internet.
@@ -92,6 +93,17 @@
       <button class="btn" data-explorer="rs-archive" data-mode="file">Browse…</button>
     </div>
     <div id="rs-info" class="archive-info hidden"></div>
+    <label>Restore target</label>
+    <label class="opt"><select id="rs-mode">
+      <option value="machine" selected>This machine (macOS) — full restore incl. models</option>
+      <option value="devcontainer">Devcontainer (Linux) — toolset only, uses this Mac's Ollama over the network</option>
+    </select></label>
+    <div id="rs-dc-extra" class="hidden">
+      <label>Ollama host URL (what the container will connect to)</label>
+      <input id="rs-host" type="text" spellcheck="false" value="http://host.docker.internal:11434">
+      <p class="note">Runs scripts/restore-devcontainer.sh — designed to run INSIDE the container
+      (CLI-first); the web app can drive it if Node is available there. No models are installed.</p>
+    </div>
     <p class="note warn">Existing installations are renamed aside (<code>*.pre-restore-…</code>), never deleted.
     Ollama will be quit during restore and restarted afterwards.</p>
     <div class="dialog-actions">

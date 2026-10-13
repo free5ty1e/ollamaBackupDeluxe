@@ -2,6 +2,12 @@
 
 Purpose: the procedure to follow when the internet is gone and inference must come back.
 
+## Before backing up (source side)
+
+Quit the CLI harnesses that hold SQLite stores (OpenCode writes `opencode.db-wal` while running;
+Claude/others keep small state) — the backup script quits Ollama automatically; for OpenCode,
+just don't run it during the backup.
+
 ## What you need (all verified offline-capable)
 
 1. The backup kit: `<name>.7z` (+ its `.sha256` and `.manifest.txt` sidecars, nice to have).
@@ -33,7 +39,9 @@ Enter the admin password when prompted (one step, for `/usr/local/bin/ollama`).
 - Re-enable Ollama → Settings → "Start at Login" (Login Items don't travel with the filesystem).
 - `scripts/verify.sh --manifest <kit>/manifest.env --expect-server` for a full audit.
 - Old installs are at `*.pre-restore-<timestamp>` — delete them once happy.
-- Sanity run: `ollama list` matches the manifest; `pi --version` matches; a small model responds.
+- Sanity run: `ollama list` matches the manifest; `pi --version`, `claude --version`,
+  `opencode --version` all match; a small model responds.
+- If a `.zshrc.obd-backup` was written, merge its PATH lines into your live `.zshrc`.
 
 ## If something is broken
 

@@ -87,7 +87,20 @@ async function apiSystem() {
   let piVersion = null;
   const piBin = path.join(piHome, 'agent/bin/pi');
   if (exists(piBin)) { const r = await sh(piBin, ['--version']); piVersion = r.err ? 'present' : r.stdout.trim().split('\n')[0]; }
-  let nodeVersion = process.version; // server itself runs on node; report separately if system node differs? keep simple
+  let nodeVersion = process.version;
+  const opencodeHome = path.join(home, '.opencode');
+  const claudeShare = path.join(home, '.local/share/claude');
+  const claudeLauncher = path.join(home, '.local/bin/claude');
+  let opencodeVersion = null;
+  if (exists(path.join(opencodeHome, 'bin/opencode'))) {
+    const r = await sh(path.join(opencodeHome, 'bin/opencode'), ['--version']);
+    opencodeVersion = r.err ? 'present' : r.stdout.trim().split('\n')[0];
+  }
+  let claudeVersion = null;
+  if (exists(claudeLauncher)) {
+    const r = await sh(claudeLauncher, ['--version']);
+    claudeVersion = r.err ? 'present' : (r.stdout.trim().split(' ')[0] || 'present');
+  }
   const models = await sh('/usr/bin/find', [path.join(ollamaHome, 'models'), '-type', 'f', '-path', '*manifests*'], { timeout: 30000 });
   const modelCount = models.err ? 0 : models.stdout.split('\n').filter(l => l.includes('/manifests/') && !l.endsWith('/manifests')).length;
   const df = await sh('/bin/df', ['-k', PROJECT_DIR]);
@@ -100,6 +113,8 @@ async function apiSystem() {
       ollamaAppSupport: { path: appSupport, present: isDir(appSupport) },
       pi: { path: piHome, present: isDir(piHome), version: piVersion, sizeKb: piKb },
       node: { version: nodeVersion },
+      claude: { home: claudeShare, present: isDir(claudeShare), version: claudeVersion },
+      opencode: { home: opencodeHome, present: isDir(opencodeHome), version: opencodeVersion },
       sevenZip: { path: seven, present: !!seven },
     },
     modelCount, diskFreeKb: freeKb,
@@ -160,7 +175,7 @@ let job = null;
 function startJob(type, args) {
   if (job && job.status === 'running') return { error: 'another job is already running' };
   const id = Date.now().toString(36);
-  const script = type === 'backup' ? 'backup.sh' : type === 'restore' ? 'restore.sh' : 'prerequisites.sh';
+  const script = { backup: 'backup.sh', restore: 'restore.sh', 'restore-devcontainer': 'restore-devcontainer.sh', prereqs: 'prerequisites.sh' }[type] || 'prerequisites.sh';
   const logFile = path.join(LOG_DIR, `${new Date().toISOString().replace(/[:.]/g, '-')}-${type}.log`);
   const child = spawn('/bin/bash', [path.join(SCRIPTS, script), ...args], {
     env: { ...process.env, OBD_NONINTERACTIVE: '1' }, cwd: PROJECT_DIR,
@@ -225,9 +240,16 @@ const server = http.createServer(async (req, res) => {
         if (Number.isInteger(level) && level >= 0 && level <= 9) args.push('--level', String(level));
         if (body.includeNodeDist === false) args.push('--no-node-dist');
         if (body.includeLogs === false) args.push('--no-logs');
+        if (body.devcontainerKit === false) args.push('--no-devcontainer');
       } else if (p === '/api/restore') {
         const archive = safePath(body.archive);
         if (!archive || !exists(archive) || isDir(archive)) return json(res, 400, { error: 'invalid archive path' });
+        if (body.mode === 'devcontainer') {
+          args = ['--archive', archive, '--yes'];
+          if (body.ollamaHost) args.push('--ollama-host', String(body.ollamaHost));
+          const r = startJob('restore-devcontainer', args);
+          return json(res, r.error ? 409 : 200, r);
+        }
         args = ['--archive', archive, '--yes'];
       }
       const r = startJob(p.slice(5), args);

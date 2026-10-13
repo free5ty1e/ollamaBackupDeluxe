@@ -32,7 +32,7 @@ tool + the embedded `restore-kit/`).
 
 - [ ] `ollama list` shows the manifest's model set
 - [ ] a model generates a completion (Ollama app running, API healthy)
-- [ ] `pi --version` matches the manifest
+- [ ] `pi --version`, `claude --version`, `opencode --version` match the manifest
 - [ ] `scripts/verify.sh --manifest … --expect-server` exits 0
 - [ ] old-machine asides removed; backup media moved to cold storage
 

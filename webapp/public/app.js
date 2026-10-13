@@ -27,6 +27,8 @@ async function refreshSystem() {
       pill(c.sevenZip.present, `7-Zip ${c.sevenZip.present ? '✓' : 'missing — run prerequisites'}`) +
       pill(c.ollamaApp.present, `Ollama ${c.ollamaApp.version || (c.ollamaApp.present ? '✓' : '✗')}`) +
       pill(c.pi.present, `Pi ${c.pi.version || (c.pi.present ? '✓' : '✗')}`) +
+      pill(c.claude.present, `Claude ${c.claude.version || (c.claude.present ? '✓' : '—')}`) +
+      pill(c.opencode.present, `OpenCode ${c.opencode.version || (c.opencode.present ? '✓' : '—')}`) +
       pill(true, `Node ${c.node.version}`) +
       pill(!!s.modelCount, `${s.modelCount} models · ${humanSize(c.ollamaHome.sizeKb)}`);
     const item = (title, detail) => `<div class="sysitem"><b>${title}</b><span class="muted">${detail || '—'}</span></div>`;
@@ -35,6 +37,8 @@ async function refreshSystem() {
       item('Ollama data', `${c.ollamaHome.path} (${humanSize(c.ollamaHome.sizeKb)})`) +
       item('Ollama app data', `${c.ollamaAppSupport.path} ${c.ollamaAppSupport.present ? '' : '(not found)'}`) +
       item('Pi', `${c.pi.version || '?'} — ${c.pi.path}`) +
+      item('Claude Code', `${c.claude.version || (c.claude.present ? 'present' : 'not installed')} — ${c.claude.home}`) +
+      item('OpenCode', `${c.opencode.version || (c.opencode.present ? 'present' : 'not installed')} — ${c.opencode.home}`) +
       item('Node', `${c.node.version} (${s.arch})`) +
       item('7-Zip', c.sevenZip.present ? c.sevenZip.path : 'missing — click Cancel & run scripts/prerequisites.sh') +
       item('Free disk (project volume)', humanSize(s.diskFreeKb)) +
@@ -80,6 +84,9 @@ $('btn-cancel').onclick = async () => { try { await api('/api/job/cancel', { met
 $('btn-refresh').onclick = refreshSystem;
 $('btn-backup').onclick = () => openModal('modal-backup');
 $('btn-restore').onclick = () => { $('rs-info').classList.add('hidden'); $('rs-start').disabled = true; openModal('modal-restore'); };
+$('rs-mode').addEventListener('change', () => {
+  $('rs-dc-extra').classList.toggle('hidden', $('rs-mode').value !== 'devcontainer');
+});
 
 // ---------------------------------------------------------------------------
 // Modals
@@ -102,6 +109,7 @@ $('bk-start').onclick = async () => {
     filename: $('bk-name').value.trim() || undefined,
     level: Number($('bk-level').value),
     includeNodeDist: $('bk-nodedist').checked,
+    devcontainerKit: $('bk-dc').checked,
     includeLogs: $('bk-logs').checked,
   };
   try {
@@ -142,11 +150,17 @@ async function loadArchiveInfo() {
 }
 $('rs-start').onclick = async () => {
   const archive = $('rs-archive').value.trim();
-  if (!confirm(`Restore this machine from:\n${archive}\n\nExisting installs will be moved aside. Continue?`)) return;
+  const mode = $('rs-mode').value;
+  const target = mode === 'devcontainer'
+    ? `Linux devcontainer (toolset only, OLLAMA_HOST=${$('rs-host').value.trim()})`
+    : 'this machine (full restore incl. models)';
+  if (!confirm(`Restore ${target} from:\n${archive}\n\nExisting installs will be moved aside. Continue?`)) return;
   try {
-    await api('/api/restore', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ archive }) });
+    const body = { archive, mode };
+    if (mode === 'devcontainer') body.ollamaHost = $('rs-host').value.trim() || undefined;
+    await api('/api/restore', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     closeModal('modal-restore');
-    showJob('Restore in progress');
+    showJob(mode === 'devcontainer' ? 'Devcontainer restore in progress' : 'Restore in progress');
   } catch (e) { alert(`Could not start restore: ${e.message}`); }
 };
 

@@ -36,11 +36,11 @@ obd_die()  { obd_err "$*"; exit 1; }
 OBD_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 OBD_PROJECT_DIR="${OBD_PROJECT_DIR:-$(cd "$OBD_SCRIPT_DIR/.." && pwd)}"
 # shellcheck disable=SC2034  # library API, consumed by sourcing scripts
-OBD_BIN_DIR="$OBD_PROJECT_DIR/bin"
+OBD_BIN_DIR="${OBD_BIN_DIR:-$OBD_PROJECT_DIR/bin}"
 # shellcheck disable=SC2034
-OBD_CACHE_DIR="$OBD_PROJECT_DIR/cache"
+OBD_CACHE_DIR="${OBD_CACHE_DIR:-$OBD_PROJECT_DIR/cache}"
 # shellcheck disable=SC2034
-OBD_LOG_DIR="$OBD_PROJECT_DIR/logs"
+OBD_LOG_DIR="${OBD_LOG_DIR:-$OBD_PROJECT_DIR/logs}"
 
 # ----------------------------------------------------------------------------
 # Overridable component paths (the testability contract — see docs/plans/)
@@ -52,6 +52,17 @@ OBD_OLLAMA_HOME="${OBD_OLLAMA_HOME:-$OBD_HOME/.ollama}"
 OBD_OLLAMA_APP_SUPPORT="${OBD_OLLAMA_APP_SUPPORT:-$OBD_HOME/Library/Application Support/Ollama}"
 OBD_PI_HOME="${OBD_PI_HOME:-$OBD_HOME/.pi}"
 OBD_PI_LAUNCHER="${OBD_PI_LAUNCHER:-$OBD_HOME/.local/bin/pi}"
+OBD_CLAUDE_HOME="${OBD_CLAUDE_HOME:-$OBD_HOME/.claude}"
+OBD_CLAUDE_SHARE="${OBD_CLAUDE_SHARE:-$OBD_HOME/.local/share/claude}"
+OBD_CLAUDE_LAUNCHER="${OBD_CLAUDE_LAUNCHER:-$OBD_HOME/.local/bin/claude}"
+OBD_OPENCODE_HOME="${OBD_OPENCODE_HOME:-$OBD_HOME/.opencode}"
+OBD_OPENCODE_CONFIG="${OBD_OPENCODE_CONFIG:-$OBD_HOME/.config/opencode}"
+OBD_OPENCODE_SHARE="${OBD_OPENCODE_SHARE:-$OBD_HOME/.local/share/opencode}"
+OBD_OPENCODE_STATE="${OBD_OPENCODE_STATE:-$OBD_HOME/.local/state/opencode}"
+# Shell rc files captured for PATH wiring (launchers are useless if PATH lacks their dirs)
+OBD_SHELL_RCS="${OBD_SHELL_RCS:-.zshrc .zprofile .zshenv .bashrc .bash_profile}"
+# Devcontainer secondary restore: where the container finds the host's ollama
+OBD_DC_OLLAMA_HOST="${OBD_DC_OLLAMA_HOST:-http://host.docker.internal:11434}"
 case "$(uname -m)" in
   arm64)  OBD_BREW_PREFIX="${OBD_BREW_PREFIX:-/opt/homebrew}" ;;
   *)      OBD_BREW_PREFIX="${OBD_BREW_PREFIX:-/usr/local}" ;;
@@ -106,6 +117,20 @@ obd_model_list() { # obd_model_list <ollama_home>
       else printf '%s/%s:%s\n' "$ns" "$name" "$tag"; fi
     done < <(find "$root" -type f -print0 2>/dev/null | sort -z)
   done | sort -u
+}
+
+# Harness detection (claude / opencode). Sets OBD_CLAUDE_VERSION,
+# OBD_OPENCODE_VERSION (empty when not installed).
+obd_detect_claude_version() {
+  local l="${OBD_CLAUDE_LAUNCHER:-}"
+  [[ -x "$l" ]] || l="$OBD_CLAUDE_SHARE/$(find "$OBD_CLAUDE_SHARE/versions" -maxdepth 1 -mindepth 1 -type f 2>/dev/null | sort -V | tail -1 | xargs basename 2>/dev/null)"
+  [[ -x "$l" ]] || return 0
+  "$l" --version 2>/dev/null | head -1 | awk '{print $1}'
+}
+obd_detect_opencode_version() {
+  local l="${OBD_OPENCODE_HOME:-}/bin/opencode"
+  [[ -x "$l" ]] || return 0
+  "$l" --version 2>/dev/null | head -1 | awk '{print $1}'
 }
 
 # Node runtime detection. Sets (when found):

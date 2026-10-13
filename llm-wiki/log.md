@@ -31,3 +31,24 @@ Append-only. Format: `## [YYYY-MM-DD] <op> | <title>` — parseable with
 - Full suite after refactor: 114/114 green. Real-machine verify: 11/11 (Ollama 0.40.3, 7 models,
   1639 blobs, Pi 1.1.0, node v26.11.1, server healthy).
 - Release bundle rebuilt with README + llm-wiki included; universal bin/7zz confirmed via lipo.
+
+## [2026-10-12] ingest | Harness expansion: Claude Code + OpenCode added to backups
+- User request: fresh MacBook should boot with pi AND claude AND opencode (all local-model capable).
+- Inspected live installs: claude native (versions/ + absolute launcher symlink + ~/.claude),
+  opencode (self-contained ~/.opencode/bin). See [[components/claude]], [[components/opencode]].
+- Also captured shell rc files (PATH wiring gap) — D13. OpenCode first-run data followed:
+  config/node_modules (61 MB × 2, offline reinstall needs them), session db, state; cache excluded;
+  selective slice of ~/.config (other apps live there) — D14.
+- Tests 146→green incl. claude/opencode restore + .obd-backup merge semantics.
+
+## [2026-10-12] build | Devcontainer kit (secondary restore)
+- New: capture-devcontainer.sh (host-side, cached Linux payloads: ollama CLI from official
+  tar.zst — 1.4-1.6 GB downloaded once, bin/ollama extracted; node/claude/opencode/7zz Linux
+  builds; claude checksum-verified via downloads.claude.ai manifest) and restore-devcontainer.sh
+  (container-side: toolset only, OLLAMA_HOST wiring, no models, exec-checks guarded by OS).
+- Backup now also writes <name>-devcontainer.tar.gz (plain tar.gz — container opens it with
+  built-in tar; bundles Linux 7zz to read the main .7z). --no-devcontainer / OBD_SKIP_DC opt-outs.
+- devcontainer/ example validation container added; webapp gained backup checkbox + restore
+  target select (machine/devcontainer). Tests +33 (fake payloads, no downloads). 179 total green.
+- Gotchas fixed: OBD_CACHE_DIR not overridable; bash globs skip dotfiles (home-shell); tar lost
+  exec bit on fake payloads (chmod defensively after extraction).
