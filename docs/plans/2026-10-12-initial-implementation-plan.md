@@ -351,6 +351,12 @@ Three workflows:
 | `e2e-restore` | macos-14 | e2e backup artifact → `restore.sh` with `OBD_DEST_PREFIX` → `verify.sh` green |
 | `webapp` | macos-14 | `node --test tests/webapp/` against current LTS Node |
 | `release-smoke` | macos-14 | build the §4b bundle (same script release.yml calls), unzip to clean dir, run `start-webapp.sh` in headless mode (no browser), hit `/api/system` |
+| `coverage` | macos-14 | `tests/coverage.sh` — full suite under kcov (bash line coverage incl. child processes) + node:test coverage → `coverage/coverage-report.md`, uploaded as artifact and echoed to the job summary |
+
+Notes: public repo ⇒ macOS runners are free; scripts only need bash + system tools;
+`prerequisites.sh` acquires 7zz in CI (network available there) and tests assert from `bin/`.
+GitHub API calls (7-Zip release lookup) authenticate with `GITHUB_TOKEN` and fall back to a
+pinned tag when the API is unavailable — anonymous runner IPs exhaust the 60 req/h limit fast.
 
 Notes: public repo ⇒ macOS runners are free; scripts only need bash + system tools;
 `prerequisites.sh` acquires 7zz in CI (network available there) and tests assert from `bin/`.

@@ -135,7 +135,9 @@ knowledge base under `llm-wiki/` is maintained by the coding agent per its `SCHE
 ```bash
 tests/run-tests.sh              # all suites (bash e2e + webapp node:test)
 tests/run-tests.sh --list       # list suites
-shellcheck scripts/*.sh         # lint (CI enforces)
+tests/coverage.sh               # full suite + coverage report (kcov bash line
+                                # coverage + node:test coverage → coverage/coverage-report.md)
+shellcheck scripts/*.sh         # lint (CI enforces, pinned to 0.11.0)
 ```
 
 Sandbox contract: every path is overridable via `OBD_*` env vars (`scripts/common.sh`), and

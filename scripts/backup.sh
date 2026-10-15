@@ -184,13 +184,18 @@ mk_stage_tree() {
       realver="$(readlink "$OBD_BREW_PREFIX/opt/$f" 2>/dev/null || true)"
       [[ -n "$realver" ]] && printf 'OPT_%s="%s"\n' "$(sanitized_key "$f")" "$realver" >> "$STAGE/opt-list.tmp"
     done
-    # bin symlinks that point into the backed-up formulae (resolve targets so
+    # brew-prefix lib/node_modules (npm's global home — lives OUTSIDE the Cellar;
+  # without it a restored bin/npm symlink would dangle)
+  [[ -d "$OBD_BREW_PREFIX/lib/node_modules" ]] && ln -s "$OBD_BREW_PREFIX/lib/node_modules" "$STAGE/brew/lib-node-modules"
+  # bin symlinks that point into the backed-up formulae (resolve targets so
     # relative links like ../lib/node_modules/... are matched by real path)
     : > "$STAGE/brew/bin-entries.txt"
     local b t rt
     while IFS= read -r -d '' b; do
       t="$(readlink "$b" 2>/dev/null || true)"; [[ -n "$t" ]] || continue
-      rt="$(cd "$OBD_BREW_PREFIX/bin" 2>/dev/null && readlink -f "$b" 2>/dev/null || true)"
+      # shellcheck disable=SC2015  # A && B || true is intentional: unresolvable
+      # targets (broken links) must not kill the loop under set -e
+      rt="$( { cd "$OBD_BREW_PREFIX/bin" 2>/dev/null && readlink -f "$b"; } 2>/dev/null || true )"
       local ok=0
       for f in $NODE_FORMULAE; do
         case "$rt" in

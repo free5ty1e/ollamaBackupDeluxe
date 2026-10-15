@@ -113,7 +113,7 @@ EOF
   # --- fake brew with node + icu4c@9 ---
   local bp="$root/brew"
   mkdir -p "$bp/Cellar/node/9.9.9/bin" "$bp/Cellar/node/9.9.9/lib/node_modules/npm/bin" \
-           "$bp/Cellar/icu4c@9/9/lib" "$bp/opt" "$bp/bin"
+           "$bp/Cellar/icu4c@9/9/lib" "$bp/opt" "$bp/bin" "$bp/lib/node_modules/npm/bin"
   cat > "$bp/Cellar/node/9.9.9/bin/node" <<'EOF'
 #!/bin/sh
 if [ "${1:-}" = "--version" ]; then echo 'v9.9.9'; fi
@@ -121,6 +121,12 @@ exit 0
 EOF
   chmod +x "$bp/Cellar/node/9.9.9/bin/node"
   echo '{"name":"npm"}' > "$bp/Cellar/node/9.9.9/lib/node_modules/npm/bin/npm-cli.js"
+  cat > "$bp/lib/node_modules/npm/bin/npm-cli.js" <<'EOF'
+#!/bin/sh
+if [ "${1:-}" = "--version" ]; then echo '11.20.0'; fi
+exit 0
+EOF
+  chmod +x "$bp/lib/node_modules/npm/bin/npm-cli.js"
   echo "icu" > "$bp/Cellar/icu4c@9/9/lib/libicuuc.9.dylib"
   ln -s ../Cellar/node/9.9.9 "$bp/opt/node"
   ln -s "../Cellar/icu4c@9/9" "$bp/opt/icu4c@9"

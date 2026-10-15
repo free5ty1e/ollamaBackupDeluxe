@@ -127,8 +127,7 @@ else
 fi
 
 # --- 5) 7-Zip for Linux (kit self-extraction inside the container) ------------
-tag="$(curl -fsSL --max-time 30 https://api.github.com/repos/ip7z/7zip/releases/latest 2>/dev/null |
-        { grep -m1 '"tag_name"' || true; } | sed -E 's/.*"v?([^"]+)".*/\1/')"
+tag="$(obd_7zz_latest_tag || true)"
 if [[ -z "$tag" ]]; then
   skip "7zz" "cannot determine latest 7-Zip release"
 else

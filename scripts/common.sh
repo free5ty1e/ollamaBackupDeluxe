@@ -224,6 +224,25 @@ obd_require_7zz() {
   exit 1
 }
 
+# GitHub API helper: auth with GITHUB_TOKEN when available (CI rate limits are
+# per-IP for anonymous calls — runners exhaust them quickly), with graceful
+# failure (caller decides what to do when the API is unreachable).
+obd_gh_api() { # obd_gh_api <url> -> body on stdout, rc nonzero on failure
+  local auth=()
+  [[ -n "${GITHUB_TOKEN:-}" ]] && auth=(-H "Authorization: Bearer ${GITHUB_TOKEN}")
+  curl -fsSL --max-time 30 "${auth[@]}" "$1" 2>/dev/null
+}
+
+# 7zz release tag resolution: API first, pinned fallback when rate-limited/offline
+obd_7zz_latest_tag() {
+  local tag
+  tag="$(obd_gh_api https://api.github.com/repos/ip7z/7zip/releases/latest |
+         { grep -m1 '"tag_name"' || true; } | sed -E 's/.*"v?([^"]+)".*/\1/' || true)"
+  if [[ -n "$tag" ]]; then printf '%s' "$tag"; return 0; fi
+  printf '%s' "${OBD_7Z_FALLBACK_TAG:-26.04}"   # pinned fallback, verified working
+  return 1
+}
+
 # Banner-safe 7zz probe: capture ALL output (usage text is tiny), find the
 # version line — the first line of 7zz output is blank.
 obd_7zz_banner() {

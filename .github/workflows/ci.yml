@@ -11,9 +11,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: shellcheck
+      - name: Install pinned shellcheck (0.11.0 — same as local gate)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          shellcheck -x scripts/*.sh tests/run-tests.sh tests/unit/*.sh tests/lib/*.sh
+          SC_VERSION=v0.11.0
+          curl -fsSL --retry 3 -H "Authorization: Bearer $GH_TOKEN" \
+            -o /tmp/sc.tar.xz "https://github.com/koalaman/shellcheck/releases/download/${SC_VERSION}/shellcheck-${SC_VERSION}.linux.x86_64.tar.xz"
+          tar -xJf /tmp/sc.tar.xz -C /tmp
+          sudo mv /tmp/shellcheck-${SC_VERSION}/shellcheck /usr/local/bin/shellcheck
+          shellcheck --version | head -2
+      - name: shellcheck
+        run: shellcheck -x scripts/*.sh tests/run-tests.sh tests/unit/*.sh tests/lib/*.sh
       - name: bash -n (syntax)
         run: |
           for f in scripts/*.sh tests/run-tests.sh tests/unit/*.sh tests/lib/*.sh; do
@@ -26,6 +35,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install 7zz (prerequisites)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: ./scripts/prerequisites.sh
       - name: Run bash test suites
         run: tests/run-tests.sh
@@ -39,9 +50,37 @@ jobs:
         with:
           node-version: 22
       - name: Install 7zz (prerequisites)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: ./scripts/prerequisites.sh
-      - name: node --test
-        run: node --test tests/webapp/
+      - name: node --test (explicit file — directory args vary across Node versions)
+        run: node --test tests/webapp/server.test.js
+
+  coverage:
+    name: Test suite + coverage report
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install 7zz (prerequisites) + kcov (bash line coverage)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ./scripts/prerequisites.sh
+          brew install kcov
+      - name: Run suite with coverage
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: tests/coverage.sh
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: |
+            coverage/coverage-report.md
+            coverage/cobertura.xml
 
   release-smoke:
     name: Release bundle smoke test
@@ -52,6 +91,8 @@ jobs:
         with:
           node-version: 22
       - name: Build release bundle (needs network for 7zz + node tarballs)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: ./scripts/build-release.sh --version 0.0.0-smoke
       - name: Unpack and boot web app headless
         run: |

@@ -54,6 +54,7 @@ test.before(async () => {
   server = spawn(process.execPath, [path.join(ROOT, 'webapp', 'server.js')], {
     env: {
       ...process.env, OBD_PORT: String(PORT), OBD_ALLOWED_ORIGIN: 'https://test.github.io',
+      OBD_SKIP_DC: '1',
       OBD_HOME: path.join(TMP, 'fix', 'fake-home'),
       OBD_OLLAMA_APP: path.join(TMP, 'fix', 'Applications', 'Ollama.app'),
       OBD_OLLAMA_HOME: path.join(TMP, 'fix', 'fake-home', '.ollama'),
@@ -120,7 +121,7 @@ test('POST /api/backup runs the real backup script to completion', async () => {
   const dest = path.join(TMP, 'out');
   fs.mkdirSync(dest, { recursive: true });
   const start = await req(PORT, 'POST', '/api/backup',
-    { destDir: dest, filename: 'webapp-test', level: 0 });
+    { destDir: dest, filename: 'webapp-test', level: 0, devcontainerKit: false });
   assert.equal(start.status, 200, `start ok: ${JSON.stringify(start.json)}`);
   // poll job until finished
   const deadline = Date.now() + 120000;

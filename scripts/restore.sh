@@ -233,6 +233,13 @@ if [[ -d "$WORK/brew/Cellar" && -n "${BREW_PREFIX:-}" && "$(ls -A "$WORK/brew/Ce
     set_aside "$CELLAR_DEST/$f"
     copy_dir "$fdir" "$CELLAR_DEST/$f"
   done
+  # brew-prefix lib/node_modules (npm global home — outside the Cellar)
+  if [[ -d "$WORK/brew/lib-node-modules" ]]; then
+    LNM_DEST="$(obd_dest "$BREW_PREFIX")/lib"
+    mkdir -p "$LNM_DEST"
+    ditto "$WORK/brew/lib-node-modules" "$LNM_DEST/node_modules" || obd_warn "could not restore lib/node_modules"
+    obd_ok "npm global home → $LNM_DEST/node_modules"
+  fi
   # opt/<formula> relative symlinks recorded in the manifest
   for f in ${NODE_FORMULAE:-}; do
     var="OPT_$(sanitized_key "$f")"; val="${!var:-}"
@@ -273,7 +280,9 @@ if [[ -d "$WORK/Applications/Ollama.app" ]]; then
   CLI_DEST="$(obd_dest "${OLLAMA_CLI_PATH:-/usr/local/bin/ollama}")"
   obd_step "Recreating Ollama CLI symlink → $CLI_DEST"
   mkdir -p "$(dirname "$CLI_DEST")"
-  [[ -e "$CLI_DEST" || -L "$CLI_DEST" ]] && rm -f "$CLI_DEST" 2>/dev/null || true
+  if [[ -e "$CLI_DEST" || -L "$CLI_DEST" ]]; then
+    rm -f "$CLI_DEST" 2>/dev/null || true
+  fi
   obd_elevate ln -sfn "$APP_DEST/Contents/Resources/ollama" "$CLI_DEST" \
     || obd_warn "Failed to create $CLI_DEST (permissions) — create it manually"
 fi

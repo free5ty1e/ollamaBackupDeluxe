@@ -68,3 +68,16 @@ Append-only. Format: `## [YYYY-MM-DD] <op> | <title>` — parseable with
   pointers (AGENTS.md rules, plan, README, wiki pages), current state, first five actions.
 - index.md now lists it under a ⭐ START HERE section at the top; SCHEMA page map and AGENTS.md
   point to it as well.
+
+## [2026-10-12] build | CI fixes + coverage pipeline
+- First CI runs exposed: Node 22 can't expand directory args in `node --test` (use explicit file),
+  ubuntu shellcheck drift vs local 0.11 (pinned in CI lint job), GitHub API 403 on runner IPs
+  (obd_gh_api auth via GITHUB_TOKEN + pinned 7zz fallback tag), webapp test accidentally ran the
+  real devcontainer capture (OBD_SKIP_DC=1 + devcontainerKit:false in test env).
+- coverage.sh: kcov (PS4 method traces CHILD scripts — backup.sh 90.2%, restore.sh 79.0%,
+  common.sh 72.2%, verify.sh 65.7% → bash total 78.6%) + node --experimental-test-coverage
+  (server.js 100%) → coverage/coverage-report.md, CI artifact + step summary. kcov DEBUG method
+  fails headless; PS4 works.
+- kcov run exposed a REAL bug: brew's npm global home lives in $prefix/lib/node_modules —
+  OUTSIDE the Cellar — so Cellar-only restore left bin/npm dangling. Now captured (brew/
+  lib-node-modules) and restored via ditto-merge; fixture mirrors real layout; tests green.
