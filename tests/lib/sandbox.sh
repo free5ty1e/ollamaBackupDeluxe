@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2016  # literal $HOME in fixture rc is intentional
 # sandbox.sh — build a miniature replica of the real inference layout for e2e
 # tests. All paths are tiny; the "binaries" are sh scripts. Used with the
 # OBD_* env overrides (see scripts/common.sh) so backup/restore never touch
@@ -64,6 +65,47 @@ EOF
   echo '{}' > "$pi/settings.json"; echo '{}' > "$pi/models.json"; echo '{}' > "$pi/models-store.json"
   echo '{}' > "$pi/sessions/s1.json"; echo 'pkg' > "$pi/npm/thing"
 
+  # --- Claude Code (native install layout: absolute launcher symlink) ---
+  local cl="$root/fake-home/.local/share/claude"
+  mkdir -p "$cl/versions" "$root/fake-home/.claude/sessions" "$root/fake-home/.claude/backups" "$root/fake-home/.claude/cache"
+  cat > "$cl/versions/2.1.251" <<'EOF'
+#!/bin/sh
+if [ "${1:-}" = "--version" ]; then echo '2.1.251 (Claude Code)'; fi
+exit 0
+EOF
+  chmod +x "$cl/versions/2.1.251"
+  mkdir -p "$root/fake-home/.local/bin"
+  ln -s "$cl/versions/2.1.251" "$root/fake-home/.local/bin/claude"
+  echo '{}' > "$root/fake-home/.claude/settings.json"
+  echo '{}' > "$root/fake-home/.claude/sessions/s1.json"
+  echo 'backup' > "$root/fake-home/.claude/backups/b1.json"
+  echo 'cache' > "$root/fake-home/.claude/cache/c.tmp"
+
+  # --- OpenCode (self-contained binary + post-first-run data dirs) ---
+  mkdir -p "$root/fake-home/.opencode/bin" "$root/fake-home/.opencode/node_modules/@opencode-ai/plugin"
+  cat > "$root/fake-home/.opencode/bin/opencode" <<'EOF'
+#!/bin/sh
+if [ "${1:-}" = "--version" ]; then echo '1.19.0'; fi
+exit 0
+EOF
+  chmod +x "$root/fake-home/.opencode/bin/opencode"
+  echo '{}' > "$root/fake-home/.opencode/package.json"
+  echo '{"name":"plugin"}' > "$root/fake-home/.opencode/node_modules/@opencode-ai/plugin/index.js"
+
+  mkdir -p "$root/fake-home/.config/opencode/node_modules"            "$root/fake-home/.local/share/opencode/log"            "$root/fake-home/.local/state/opencode/locks"
+  echo '{}' > "$root/fake-home/.config/opencode/opencode.jsonc"
+  echo '{"name":"x"}' > "$root/fake-home/.config/opencode/node_modules/pkg.js"
+  echo 'sqlite' > "$root/fake-home/.local/share/opencode/opencode.db"
+  echo 'log' > "$root/fake-home/.local/share/opencode/log/opencode.log"
+  echo '{"model":"x"}' > "$root/fake-home/.local/state/opencode/model.json"
+  echo 'q?' > "$root/fake-home/.local/state/opencode/prompt-history.jsonl"
+
+  # other app in ~/.config that must NOT be captured
+  mkdir -p "$root/fake-home/.config/filezilla"; echo 'unrelated' > "$root/fake-home/.config/filezilla/fz.txt"
+
+  # --- shell rc (PATH wiring) ---
+  printf '# fixture rc\nexport PATH="$HOME/.local/bin:$HOME/.opencode/bin:$PATH"\n' > "$root/fake-home/.zshrc"
+
   # --- Application Support ---
   mkdir -p "$root/fake-home/Library/Application Support/Ollama"
   echo "sqlite" > "$root/fake-home/Library/Application Support/Ollama/db.sqlite"
@@ -71,7 +113,7 @@ EOF
   # --- fake brew with node + icu4c@9 ---
   local bp="$root/brew"
   mkdir -p "$bp/Cellar/node/9.9.9/bin" "$bp/Cellar/node/9.9.9/lib/node_modules/npm/bin" \
-           "$bp/Cellar/icu4c@9/9/lib" "$bp/opt" "$bp/bin"
+           "$bp/Cellar/icu4c@9/9/lib" "$bp/opt" "$bp/bin" "$bp/lib/node_modules/npm/bin"
   cat > "$bp/Cellar/node/9.9.9/bin/node" <<'EOF'
 #!/bin/sh
 if [ "${1:-}" = "--version" ]; then echo 'v9.9.9'; fi
@@ -79,6 +121,12 @@ exit 0
 EOF
   chmod +x "$bp/Cellar/node/9.9.9/bin/node"
   echo '{"name":"npm"}' > "$bp/Cellar/node/9.9.9/lib/node_modules/npm/bin/npm-cli.js"
+  cat > "$bp/lib/node_modules/npm/bin/npm-cli.js" <<'EOF'
+#!/bin/sh
+if [ "${1:-}" = "--version" ]; then echo '11.20.0'; fi
+exit 0
+EOF
+  chmod +x "$bp/lib/node_modules/npm/bin/npm-cli.js"
   echo "icu" > "$bp/Cellar/icu4c@9/9/lib/libicuuc.9.dylib"
   ln -s ../Cellar/node/9.9.9 "$bp/opt/node"
   ln -s "../Cellar/icu4c@9/9" "$bp/opt/icu4c@9"
@@ -108,6 +156,14 @@ sandbox_env() {
   export OBD_OLLAMA_APP_SUPPORT="$OBD_HOME/Library/Application Support/Ollama"
   export OBD_PI_HOME="$OBD_HOME/.pi"
   export OBD_PI_LAUNCHER="$OBD_HOME/.local/bin/pi"
+  export OBD_CLAUDE_HOME="$OBD_HOME/.claude"
+  export OBD_CLAUDE_SHARE="$OBD_HOME/.local/share/claude"
+  export OBD_CLAUDE_LAUNCHER="$OBD_HOME/.local/bin/claude"
+  export OBD_OPENCODE_HOME="$OBD_HOME/.opencode"
+  export OBD_OPENCODE_CONFIG="$OBD_HOME/.config/opencode"
+  export OBD_OPENCODE_SHARE="$OBD_HOME/.local/share/opencode"
+  export OBD_OPENCODE_STATE="$OBD_HOME/.local/state/opencode"
+  export OBD_SKIP_DC=1   # standard suites never download linux payloads
   export OBD_BREW_PREFIX="$root/brew"
   export OBD_NODE_BIN="$root/brew/Cellar/node/9.9.9/bin/node"
   case ":$PATH:" in

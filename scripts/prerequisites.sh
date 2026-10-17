@@ -51,8 +51,7 @@ else
   fi
   # c) direct download from the official 7-Zip project (works without brew)
   if [[ -z "$got" ]]; then
-    api_json="$(curl -fsSL --max-time 30 https://api.github.com/repos/ip7z/7zip/releases/latest || true)"
-    tag="$(printf '%s' "$api_json" | grep -m1 '"tag_name"' | sed -E 's/.*"v?([^"]+)".*/\1/' || true)"
+    tag="$(obd_7zz_latest_tag || true)"
     [[ -n "$tag" ]] || obd_die "Could not determine latest 7-Zip release (offline?)."
     vnum="${tag//./}"
     # macOS assets have been arch-agnostic (…-mac.tar.xz); try arch-specific first

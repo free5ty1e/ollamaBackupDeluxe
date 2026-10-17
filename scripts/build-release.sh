@@ -40,9 +40,8 @@ printf '%s\n' "$VERSION" > "$REL/VERSION"
 # --- 7zz: official mac builds are universal (one binary, both arches) ---
 acquire_7zz() { # acquire_7zz <output-path>
   local out="$1"
-  local url vnum tag api_json
-  api_json="$(curl -fsSL --max-time 30 https://api.github.com/repos/ip7z/7zip/releases/latest || true)"
-  tag="$(printf '%s' "$api_json" | grep -m1 '"tag_name"' | sed -E 's/.*"v?([^"]+)".*/\1/' || true)"
+  local url vnum tag
+  tag="$(obd_7zz_latest_tag || true)"
   [[ -n "$tag" ]] || obd_die "cannot determine latest 7-Zip release"
   vnum="${tag//./}"
   url="https://github.com/ip7z/7zip/releases/download/$tag/7z${vnum}-mac.tar.xz"

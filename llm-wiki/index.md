@@ -3,6 +3,12 @@
 Catalog of the wiki. One line per page. The LLM updates this on every ingest; read it first
 when answering queries. (Pattern source: [[sources/llm-wiki-pattern]].)
 
+## ⭐ START HERE
+
+- [[introduction]] — **the initial prompt / briefing for any new agent or developer**: what the
+  project is, why it exists, how it is used, structure, where everything lives, and the first
+  five actions to take. New sessions should read this before anything else.
+
 ## Meta
 
 - [[SCHEMA]] — operating manual for maintaining this wiki.
@@ -16,20 +22,24 @@ when answering queries. (Pattern source: [[sources/llm-wiki-pattern]].)
 
 - [[components/ollama]] — Ollama app/CLI/data layout on this Mac; 61 GB models; manifest trees.
 - [[components/pi]] — Pi's managed install, launcher resolution chain, config/auth files.
+- [[components/claude]] — Claude Code native install (versioned self-contained binaries, absolute launcher symlink).
+- [[components/opencode]] — OpenCode binary + post-first-run data: config (node_modules), session db, state; cache excluded.
 - [[components/node-runtime]] — Homebrew node + ~25 dylib formulae; why bare-binary backups fail.
 - [[components/seven-zip]] — 7zz acquisition paths, switch behavior, bash pipefail traps.
 
 ## Architecture (this tool)
 
 - [[architecture/backup-archive-layout]] — exact .7z contents: staging names → restore destinations.
-- [[architecture/backup-flow]] — preflight → symlink staging → 7zz → sidecars; options; guards.
+- [[architecture/backup-flow]] — preflight → symlink staging (no data copies; pinnable dir) → 7zz → sidecars; options; guards.
 - [[architecture/restore-flow]] — quit → extract → rename-aside → reinstall → symlinks → verify.
-- [[architecture/webapp]] — zero-dependency server, endpoints, job runner, file explorer.
+- [[architecture/webapp]] — zero-dependency server, endpoints, job runner, file explorer; Pages modes (local/remote/guide) + one-command bootstrap.
+- [[architecture/devcontainer-kit]] — secondary restore: Linux toolset kit (ollama CLI + harnesses, no models), captured online, restored offline.
 
 ## Runbooks (do-this-when procedures)
 
 - [[runbooks/offline-restore]] — restoring with wifi off: what you need, exact steps, fallbacks.
 - [[runbooks/fresh-os-reload]] — new MacBook end-to-end incl. release bundle self-bootstrap.
+- [[runbooks/devcontainer-restore]] — Linux devcontainer: toolset only, OLLAMA_HOST to this Mac.
 
 ## Reference
 

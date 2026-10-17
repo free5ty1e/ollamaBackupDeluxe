@@ -13,6 +13,13 @@ Purpose: how restore.sh rebuilds a machine from a kit — order, safety, and ver
    the error prints exact manual steps. Then `ditto` the bundle into place.
 4. **Data homes**: `~/.ollama`, `~/.pi` (same rename-aside + `ditto`), then recreate the Pi
    launcher symlink (`../../.pi/agent/bin/pi`, relative, as originally installed).
+   3b. **Claude Code**: `~/.local/share/claude` + `~/.claude` + launcher — the recorded symlink
+       target is absolute, so restore remaps any `CLAUDE_SHARE_PATH` prefix through the
+       destination mapping (no-op in real mode; keeps sandbox tests coherent).
+   3c. **OpenCode**: `~/.opencode` tree.
+   3d. **Shell rcs**: for each name in `SHELL_RCS`, restore into `$HOME` — if a file already
+       exists there, the kit's copy is written as `<name>.obd-backup` and the user is told to
+       merge PATH lines (never clobber).
 5. **App-support db** → `~/Library/Application Support/Ollama`.
 6. **Node**: if the kit has the brew chain → copy Cellars under `BREW_PREFIX`, recreate
    `opt/<formula>` relative symlinks from `OPT_*` manifest keys, recreate bin entries from

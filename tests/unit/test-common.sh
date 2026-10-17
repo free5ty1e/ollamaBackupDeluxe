@@ -44,6 +44,11 @@ OBD_7ZZ="$fake7"; export OBD_7ZZ
 obd_find_7zz; assert_eq "$OBD_7ZZ" "$fake7" "find_7zz: env override wins"
 unset OBD_7ZZ
 
+# --- harness version detection (fixture binaries) ---
+sandbox_env "$TMP/fix"
+assert_eq "$(obd_detect_claude_version)" "2.1.251" "claude version via launcher symlink"
+assert_eq "$(obd_detect_opencode_version)" "1.19.0" "opencode version via home binary"
+
 # --- manifest.env round trip (quoted values with spaces) ---
 cat > "$TMP/manifest.env" <<EOF
 OLLAMA_HOME_PATH="$TMP/fix/fake-home/.ollama"

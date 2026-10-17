@@ -20,6 +20,11 @@ dry_out="$(bash "$HERE/scripts/backup.sh" --dest "$TMP" --name dryrun --dry-run 
 assert_contains "$dry_out" "DRY RUN" "dry run announces itself"
 [[ ! -f "$TMP/dryrun.7z" ]] && _pass "dry run creates no archive" || _fail "dry run creates no archive"
 
+# --- --staging-dir: staging built inside the requested folder (dry-run keeps it) ---
+mkdir -p "$TMP/mystage"
+bash "$HERE/scripts/backup.sh" --dest "$TMP" --name sdir --staging-dir "$TMP/mystage" --dry-run >/dev/null 2>&1
+assert_dir_exists "$TMP/mystage/obd-stage."* "staging honored --staging-dir (dry-run keeps it)"
+
 # --- real backup ---
 run_out="$(bash "$HERE/scripts/backup.sh" --dest "$TMP" --name obdtest --yes 2>&1)"; rc=$?
 assert_exit "$rc" "0" "backup.sh exits 0"
@@ -44,6 +49,16 @@ assert_contains "$listing" "Applications/Ollama.app/Contents/Resources/ollama" "
 assert_contains "$listing" "app-support/Ollama/db.sqlite"      "archive: app-support db"
 assert_contains "$listing" "brew/Cellar/node/"                 "archive: node cellar"
 assert_contains "$listing" "brew/Cellar/icu4c@9/"              "archive: node dep formulae"
+assert_contains "$listing" "home/.local/share/claude/versions/"  "archive: claude runtime versions"
+assert_contains "$listing" "home/.claude/settings.json"          "archive: claude data"
+assert_contains "$listing" "home/.opencode/bin/opencode"         "archive: opencode binary"
+assert_contains "$listing" "home/.opencode/node_modules/"        "archive: opencode plugin node_modules (offline reinstall)"
+assert_contains "$listing" "home/.config/opencode/opencode.jsonc" "archive: opencode config"
+assert_contains "$listing" "home/.local/share/opencode/opencode.db" "archive: opencode session db"
+assert_contains "$listing" "home/.local/state/opencode/prompt-history.jsonl" "archive: opencode state"
+assert_not_contains "$listing" "home/.config/filezilla"          "archive: unrelated ~/.config apps excluded"
+assert_not_contains "$listing" ".cache/opencode"                 "archive: opencode cache excluded"
+assert_contains "$listing" "home-shell/.zshrc"                   "archive: shell rc captured"
 assert_contains "$listing" "restore-kit/7zz"                   "archive: embedded 7zz"
 assert_contains "$listing" "restore-kit/restore.sh"            "archive: embedded restore script"
 assert_contains "$listing" "project/scripts/backup.sh"         "archive: project copy"
@@ -63,6 +78,13 @@ assert_contains "$menv" "ARCH=\"$(uname -m)\""    "manifest: arch"
 assert_contains "$menv" 'EXCLUDE_MODELS="0"'      "manifest: models included flag"
 assert_contains "$menv" 'OPT_NODE="../Cellar/node/9.9.9"' "manifest: brew opt symlink target"
 assert_contains "$menv" 'OPT_ICU4C_9="../Cellar/icu4c@9/9"' "manifest: brew opt symlink target (sanitized key)"
+assert_contains "$menv" 'CLAUDE_VERSION="2.1.251"'  "manifest: claude version"
+assert_contains "$menv" 'OPENCODE_VERSION="1.19.0"' "manifest: opencode version"
+assert_contains "$menv" 'CLAUDE_LAUNCHER_TARGET="'  "manifest: claude launcher target recorded"
+assert_contains "$menv" 'SHELL_RCS=".zshrc"'        "manifest: shell rcs recorded"
+assert_contains "$menv" 'OPENCODE_CONFIG_PATH="'    "manifest: opencode config path"
+assert_contains "$menv" 'OPENCODE_SHARE_PATH="'     "manifest: opencode share path"
+assert_contains "$menv" 'OPENCODE_STATE_PATH="'     "manifest: opencode state path"
 
 # --- bin-entries capture ---
 bin_entries="$("$Z" e -y -bso0 -ba -so "$TMP/obdtest.7z" brew/bin-entries.txt)"

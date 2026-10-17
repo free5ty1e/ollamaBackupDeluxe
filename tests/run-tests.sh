@@ -51,7 +51,7 @@ if (( ${#SUITES[@]} > 0 )); then
 fi
 if [[ "$RUN_WEBAPP" == "1" ]] && command -v node >/dev/null 2>&1; then
   printf '\n== test-webapp ==\n'
-  out="$(cd "$ROOT" && node --test tests/webapp/ 2>&1)"; rc=$?
+  out="$(cd "$ROOT" && node --test tests/webapp/server.test.js 2>&1)"; rc=$?
   printf '%s\n' "$out" | tail -20
   p="$(printf '%s' "$out" | grep -oE '(^# pass|[ℹ] pass) ?[0-9]+' | tail -1 | grep -oE '[0-9]+')"
   f="$(printf '%s' "$out" | grep -oE '(^# fail|[ℹ] fail) ?[0-9]+' | tail -1 | grep -oE '[0-9]+')"

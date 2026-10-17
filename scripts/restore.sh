@@ -137,6 +137,79 @@ if [[ -d "$WORK/home/.pi" && -n "${PI_LAUNCHER_PATH:-}" ]]; then
 fi
 
 # ---------------------------------------------------------------------------
+# 3b) Claude Code (native install: versioned runtime + data + launcher)
+# ---------------------------------------------------------------------------
+if [[ -d "$WORK/home/.local/share/claude" && -n "${CLAUDE_SHARE_PATH:-}" ]]; then
+  CS_DEST="$(obd_dest "$CLAUDE_SHARE_PATH")"
+  obd_step "Restoring Claude Code runtime → $CS_DEST"
+  set_aside "$CS_DEST"
+  copy_dir "$WORK/home/.local/share/claude" "$CS_DEST"
+fi
+if [[ -d "$WORK/home/.claude" && -n "${CLAUDE_HOME_PATH:-}" ]]; then
+  CH_DEST="$(obd_dest "$CLAUDE_HOME_PATH")"
+  obd_step "Restoring Claude Code data → $CH_DEST"
+  set_aside "$CH_DEST"
+  copy_dir "$WORK/home/.claude" "$CH_DEST"
+fi
+if [[ -d "$WORK/home/.local/share/claude" && -n "${CLAUDE_LAUNCHER_PATH:-}" && -n "${CLAUDE_LAUNCHER_TARGET:-}" ]]; then
+  CL_DEST="$(obd_dest "$CLAUDE_LAUNCHER_PATH")"
+  mkdir -p "$(dirname "$CL_DEST")"
+  # the recorded target is absolute and points into the share dir — remap it
+  # through obd_dest so sandbox prefixes stay coherent (real mode: no-op)
+  cl_tgt="${CLAUDE_LAUNCHER_TARGET/#"$CLAUDE_SHARE_PATH"/$(obd_dest "$CLAUDE_SHARE_PATH")}"
+  ln -sfn "$cl_tgt" "$CL_DEST"
+  obd_ok "Claude launcher symlink → $CL_DEST"
+fi
+
+# ---------------------------------------------------------------------------
+# 3c) OpenCode (binary tree + config/share/state; PATH wired via shell rc below)
+# ---------------------------------------------------------------------------
+if [[ -d "$WORK/home/.opencode" && -n "${OPENCODE_HOME_PATH:-}" ]]; then
+  OC_DEST="$(obd_dest "$OPENCODE_HOME_PATH")"
+  obd_step "Restoring OpenCode → $OC_DEST"
+  set_aside "$OC_DEST"
+  copy_dir "$WORK/home/.opencode" "$OC_DEST"
+fi
+if [[ -d "$WORK/home/.config/opencode" && -n "${OPENCODE_CONFIG_PATH:-}" ]]; then
+  OCC_DEST="$(obd_dest "$OPENCODE_CONFIG_PATH")"
+  obd_step "Restoring OpenCode config → $OCC_DEST"
+  set_aside "$OCC_DEST"
+  copy_dir "$WORK/home/.config/opencode" "$OCC_DEST"
+fi
+if [[ -d "$WORK/home/.local/share/opencode" && -n "${OPENCODE_SHARE_PATH:-}" ]]; then
+  OCS_DEST="$(obd_dest "$OPENCODE_SHARE_PATH")"
+  obd_step "Restoring OpenCode session data → $OCS_DEST"
+  set_aside "$OCS_DEST"
+  copy_dir "$WORK/home/.local/share/opencode" "$OCS_DEST"
+fi
+if [[ -d "$WORK/home/.local/state/opencode" && -n "${OPENCODE_STATE_PATH:-}" ]]; then
+  OCT_DEST="$(obd_dest "$OPENCODE_STATE_PATH")"
+  obd_step "Restoring OpenCode state → $OCT_DEST"
+  set_aside "$OCT_DEST"
+  copy_dir "$WORK/home/.local/state/opencode" "$OCT_DEST"
+fi
+
+# ---------------------------------------------------------------------------
+# 3d) Shell rc files (PATH wiring) — fill gaps, never clobber
+# (iterate manifest-recorded names: rc files are dotfiles, globs skip them)
+# ---------------------------------------------------------------------------
+if [[ -d "$WORK/home-shell" && -n "${SHELL_RCS:-}" ]]; then
+  obd_step "Restoring shell rc files (PATH wiring)…"
+  for name in $SHELL_RCS; do
+    f="$WORK/home-shell/$name"
+    [[ -f "$f" ]] || continue
+    rc_dest="$(obd_dest "${OBD_HOME:-$HOME}/$name")"
+    if [[ -e "$rc_dest" ]]; then
+      cp "$f" "$rc_dest.obd-backup"
+      obd_warn "$name exists — kit version saved as $(basename "$rc_dest").obd-backup (merge PATH lines manually)"
+    else
+      cp "$f" "$rc_dest"
+      obd_ok "$name restored"
+    fi
+  done
+fi
+
+# ---------------------------------------------------------------------------
 # 4) Ollama app-support data (~/Library/Application Support/Ollama)
 # ---------------------------------------------------------------------------
 if [[ -d "$WORK/app-support/Ollama" && -n "${OLLAMA_APP_SUPPORT_PATH:-}" ]]; then
@@ -160,6 +233,13 @@ if [[ -d "$WORK/brew/Cellar" && -n "${BREW_PREFIX:-}" && "$(ls -A "$WORK/brew/Ce
     set_aside "$CELLAR_DEST/$f"
     copy_dir "$fdir" "$CELLAR_DEST/$f"
   done
+  # brew-prefix lib/node_modules (npm global home — outside the Cellar)
+  if [[ -d "$WORK/brew/lib-node-modules" ]]; then
+    LNM_DEST="$(obd_dest "$BREW_PREFIX")/lib"
+    mkdir -p "$LNM_DEST"
+    ditto "$WORK/brew/lib-node-modules" "$LNM_DEST/node_modules" || obd_warn "could not restore lib/node_modules"
+    obd_ok "npm global home → $LNM_DEST/node_modules"
+  fi
   # opt/<formula> relative symlinks recorded in the manifest
   for f in ${NODE_FORMULAE:-}; do
     var="OPT_$(sanitized_key "$f")"; val="${!var:-}"
@@ -200,7 +280,9 @@ if [[ -d "$WORK/Applications/Ollama.app" ]]; then
   CLI_DEST="$(obd_dest "${OLLAMA_CLI_PATH:-/usr/local/bin/ollama}")"
   obd_step "Recreating Ollama CLI symlink → $CLI_DEST"
   mkdir -p "$(dirname "$CLI_DEST")"
-  [[ -e "$CLI_DEST" || -L "$CLI_DEST" ]] && rm -f "$CLI_DEST" 2>/dev/null || true
+  if [[ -e "$CLI_DEST" || -L "$CLI_DEST" ]]; then
+    rm -f "$CLI_DEST" 2>/dev/null || true
+  fi
   obd_elevate ln -sfn "$APP_DEST/Contents/Resources/ollama" "$CLI_DEST" \
     || obd_warn "Failed to create $CLI_DEST (permissions) — create it manually"
 fi
@@ -230,6 +312,13 @@ OBD_OLLAMA_APP_SUPPORT="$(obd_dest "${OLLAMA_APP_SUPPORT_PATH:-}")" \
 OBD_PI_HOME="$(obd_dest "${PI_HOME_PATH:-$HOME/.pi}")" \
 OBD_PI_LAUNCHER="$(obd_dest "${PI_LAUNCHER_PATH:-$HOME/.local/bin/pi}")" \
 OBD_BREW_PREFIX="$(obd_dest "${BREW_PREFIX:-/opt/homebrew}")" \
+OBD_CLAUDE_HOME="$(obd_dest "${CLAUDE_HOME_PATH:-}")" \
+OBD_CLAUDE_SHARE="$(obd_dest "${CLAUDE_SHARE_PATH:-}")" \
+OBD_CLAUDE_LAUNCHER="$(obd_dest "${CLAUDE_LAUNCHER_PATH:-}")" \
+OBD_OPENCODE_HOME="$(obd_dest "${OPENCODE_HOME_PATH:-}")" \
+OBD_OPENCODE_CONFIG="$(obd_dest "${OPENCODE_CONFIG_PATH:-}")" \
+OBD_OPENCODE_SHARE="$(obd_dest "${OPENCODE_SHARE_PATH:-}")" \
+OBD_OPENCODE_STATE="$(obd_dest "${OPENCODE_STATE_PATH:-}")" \
   "$WORK/restore-kit/verify.sh" --manifest "$WORK/manifest.env" --skip-cli-symlink --allow-offline \
   || { obd_err "Verification FAILED — see report above"; exit 4; }
 

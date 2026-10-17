@@ -132,6 +132,65 @@ else
   chk "Pi home" 1 "$OBD_PI_HOME not found"
 fi
 
+# --- Claude Code (checked when its paths resolve or the manifest mentions it) ---
+if [[ -d "$OBD_CLAUDE_SHARE" || -n "${CLAUDE_SHARE_PATH:-}" ]]; then
+  if [[ -d "$OBD_CLAUDE_SHARE" ]]; then
+    nver="$(find "$OBD_CLAUDE_SHARE/versions" -maxdepth 1 -mindepth 1 2>/dev/null | wc -l | tr -d ' ')"
+    chk "Claude Code runtime" 0 "$nver version(s) ($OBD_CLAUDE_SHARE)"
+  else
+    chk "Claude Code runtime" 1 "$OBD_CLAUDE_SHARE missing"
+  fi
+  if [[ -x "$OBD_CLAUDE_LAUNCHER" ]]; then
+    clv="$("$OBD_CLAUDE_LAUNCHER" --version 2>/dev/null | head -1 | awk '{print $1}')"
+    clv="${clv:-runs}"
+    clv_exp="${CLAUDE_VERSION:-}"
+    if [[ -n "$clv_exp" && "$clv_exp" != "none" && -n "$(printf '%s' "$clv" | tr -d ' ')" && "$clv" != "$clv_exp" ]]; then
+      chk "Claude launcher" 1 "version '$clv' != manifest '$clv_exp'"
+    else
+      chk "Claude launcher" 0 "$clv"
+    fi
+  else
+    chk "Claude launcher" 1 "$OBD_CLAUDE_LAUNCHER missing"
+  fi
+  if [[ -d "$OBD_CLAUDE_HOME" ]]; then
+    chk "Claude data" 0 "$OBD_CLAUDE_HOME"
+  else
+    chk "Claude data" 1 "$OBD_CLAUDE_HOME missing"
+  fi
+fi
+
+# --- OpenCode ---
+if [[ -d "$OBD_OPENCODE_HOME" || -n "${OPENCODE_HOME_PATH:-}" ]]; then
+  if [[ -x "$OBD_OPENCODE_HOME/bin/opencode" ]]; then
+    oc="$("$OBD_OPENCODE_HOME/bin/opencode" --version 2>/dev/null | head -1 | awk '{print $1}')"
+    oc="${oc:-runs}"
+    oc_exp="${OPENCODE_VERSION:-}"
+    if [[ -n "$oc_exp" && "$oc_exp" != "none" && -n "$(printf '%s' "$oc" | tr -d ' ')" && "$oc" != "$oc_exp" ]]; then
+      chk "OpenCode" 1 "version '$oc' != manifest '$oc_exp'"
+    else
+      chk "OpenCode" 0 "$oc ($OBD_OPENCODE_HOME)"
+    fi
+  else
+    chk "OpenCode" 1 "binary missing ($OBD_OPENCODE_HOME/bin/opencode)"
+  fi
+  # session/config data (only when present — absent on a never-run install)
+  if [[ -d "$OBD_OPENCODE_CONFIG" ]]; then
+    chk "OpenCode config" 0 "$OBD_OPENCODE_CONFIG"
+  elif [[ -n "${OPENCODE_CONFIG_PATH:-}" ]]; then
+    chk "OpenCode config" 1 "$OBD_OPENCODE_CONFIG missing"
+  fi
+  if [[ -f "$OBD_OPENCODE_SHARE/opencode.db" ]]; then
+    chk "OpenCode sessions" 0 "opencode.db present"
+  elif [[ -n "${OPENCODE_SHARE_PATH:-}" && -d "$OBD_OPENCODE_SHARE" ]]; then
+    chk "OpenCode sessions" 1 "opencode.db missing"
+  fi
+  if [[ -d "$OBD_OPENCODE_STATE" ]]; then
+    chk "OpenCode state" 0 "$OBD_OPENCODE_STATE"
+  elif [[ -n "${OPENCODE_STATE_PATH:-}" ]]; then
+    chk "OpenCode state" 1 "$OBD_OPENCODE_STATE missing"
+  fi
+fi
+
 # --- Node runtime ---
 node_ok=1; node_detail=""
 if command -v node >/dev/null 2>&1; then

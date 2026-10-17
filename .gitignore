@@ -20,3 +20,9 @@
 
 # Obsidian workspace (local UI state, not knowledge)
 llm-wiki/.obsidian/
+
+# PR description draft workspace
+.pr_temp/
+
+# Coverage artifacts
+coverage/

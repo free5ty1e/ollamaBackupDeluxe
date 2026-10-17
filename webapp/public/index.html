@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ollama Backup Deluxe</title>
-<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 <header>
@@ -19,6 +19,39 @@
 </header>
 
 <main>
+  <section id="connected-banner" class="banner ok hidden">
+    <span>⚡ Connected to your local engine at <b id="connected-host"></b> — full functionality below.</span>
+  </section>
+
+  <section id="guide-panel" class="panel guide hidden">
+    <div class="panel-head"><span>Static copy — the backup/restore engine runs on your Mac</span></div>
+    <div class="guide-body">
+      <p>For security, no web page can read your disk or run scripts — the backup engine is a
+      small local app. Setup takes about a minute:</p>
+      <div class="quicksetup">
+        <b>Recommended — one command</b> (downloads the latest release, installs it, and starts the
+        engine authorized for this page — no manual steps):
+        <pre class="log inline" id="guide-oneliner"></pre>
+        <button id="guide-copy" class="btn small">Copy command</button>
+        <span class="muted">then reload this page — it connects automatically</span>
+      </div>
+      <ol class="steps">
+        <li>Manual alternative: <a id="guide-download" class="btn primary hidden" href="#">⬇ Download the latest release</a>
+            <span id="guide-nodl" class="muted">Grab the latest <code>ollama-backup-deluxe-vX-macos.zip</code> from this project's GitHub Releases.</span></li>
+        <li>Unzip it, then in Terminal:
+          <pre class="log inline">cd ollama-backup-deluxe-v*-macos
+./start-webapp.sh</pre></li>
+        <li>The local app opens at <a href="http://127.0.0.1:8686">http://127.0.0.1:8686</a> —
+            this page will connect to it automatically within a few seconds.</li>
+      </ol>
+      <p class="note">Optional — let <b>this hosted page</b> control your local engine (instead of using the local
+      copy of the UI): quit the local app and restart it with
+      <pre class="log inline">OBD_ALLOWED_ORIGIN="<span id="guide-origin"></span>" ./start-webapp.sh</pre>
+      then reload this page. Only set that origin to this site.</p>
+      <p class="note muted">Knowledge base: <a href="llm-wiki/">llm-wiki/</a> · plans under <a href="docs/">docs/</a></p>
+    </div>
+  </section>
+
   <section class="hero">
     <button id="btn-backup" class="action backup">
       <span class="icon">⬇</span>
@@ -71,7 +104,12 @@
         </select>
       </label>
       <label class="opt check"><input id="bk-nodedist" type="checkbox" checked> Include Node.js fallback runtime</label>
+      <label class="opt check"><input id="bk-dc" type="checkbox" checked> Build devcontainer kit (Linux payloads — for containers that use this Mac's Ollama over the network)</label>
       <label class="opt check"><input id="bk-logs" type="checkbox" checked> Include logs</label>
+      <details class="opt"><summary class="muted">Advanced</summary>
+        <label>Staging folder <span class="muted">(tiny — symlinks + manifest only; models are read through them, never copied. Default: system temp)</span>
+        <input id="bk-staging" type="text" spellcheck="false" placeholder="optional — e.g. /Volumes/FastDisk/obd-staging"></label>
+      </details>
     </div>
     <p class="note">The archive contains its own extractor + restore scripts — restorable with no internet.
     Model weights are already-compressed data; higher levels mostly waste time.</p>
@@ -92,6 +130,17 @@
       <button class="btn" data-explorer="rs-archive" data-mode="file">Browse…</button>
     </div>
     <div id="rs-info" class="archive-info hidden"></div>
+    <label>Restore target</label>
+    <label class="opt"><select id="rs-mode">
+      <option value="machine" selected>This machine (macOS) — full restore incl. models</option>
+      <option value="devcontainer">Devcontainer (Linux) — toolset only, uses this Mac's Ollama over the network</option>
+    </select></label>
+    <div id="rs-dc-extra" class="hidden">
+      <label>Ollama host URL (what the container will connect to)</label>
+      <input id="rs-host" type="text" spellcheck="false" value="http://host.docker.internal:11434">
+      <p class="note">Runs scripts/restore-devcontainer.sh — designed to run INSIDE the container
+      (CLI-first); the web app can drive it if Node is available there. No models are installed.</p>
+    </div>
     <p class="note warn">Existing installations are renamed aside (<code>*.pre-restore-…</code>), never deleted.
     Ollama will be quit during restore and restarted afterwards.</p>
     <div class="dialog-actions">
@@ -116,6 +165,7 @@
   </div>
 </div>
 
-<script src="/app.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
