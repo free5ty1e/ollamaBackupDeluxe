@@ -257,6 +257,10 @@ const server = http.createServer(async (req, res) => {
         if (body.includeNodeDist === false) args.push('--no-node-dist');
         if (body.includeLogs === false) args.push('--no-logs');
         if (body.devcontainerKit === false) args.push('--no-devcontainer');
+        if (body.stagingDir && typeof body.stagingDir === 'string' && body.stagingDir.length < 500
+            && !body.stagingDir.includes('\0')) {
+          args.push('--staging-dir', body.stagingDir);
+        }
       } else if (p === '/api/restore') {
         const archive = safePath(body.archive);
         if (!archive || !exists(archive) || isDir(archive)) return json(res, 400, { error: 'invalid archive path' });

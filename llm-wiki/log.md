@@ -81,3 +81,11 @@ Append-only. Format: `## [YYYY-MM-DD] <op> | <title>` — parseable with
 - kcov run exposed a REAL bug: brew's npm global home lives in $prefix/lib/node_modules —
   OUTSIDE the Cellar — so Cellar-only restore left bin/npm dangling. Now captured (brew/
   lib-node-modules) and restored via ditto-merge; fixture mirrors real layout; tests green.
+
+## [2026-10-12] build | staging-dir option + Pages one-command bootstrap
+- Clarified/improved staging: it is symlink-only (no 61 GB temp copy); location now pinnable via
+  backup.sh --staging-dir and the webapp Advanced field (server passes it through).
+- scripts/bootstrap-remote.sh: Pages-baked one-command setup (curl … | bash) — downloads latest
+  release via API (page-scrape fallback), installs to ~/.ollama-backup-deluxe, starts the engine
+  with OBD_ALLOWED_ORIGIN preset so the hosted UI auto-connects for full backup/restore.
+  Guide mode now shows the copyable one-liner with a copy button; D17 recorded.

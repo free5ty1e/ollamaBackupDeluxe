@@ -20,6 +20,11 @@ dry_out="$(bash "$HERE/scripts/backup.sh" --dest "$TMP" --name dryrun --dry-run 
 assert_contains "$dry_out" "DRY RUN" "dry run announces itself"
 [[ ! -f "$TMP/dryrun.7z" ]] && _pass "dry run creates no archive" || _fail "dry run creates no archive"
 
+# --- --staging-dir: staging built inside the requested folder (dry-run keeps it) ---
+mkdir -p "$TMP/mystage"
+bash "$HERE/scripts/backup.sh" --dest "$TMP" --name sdir --staging-dir "$TMP/mystage" --dry-run >/dev/null 2>&1
+assert_dir_exists "$TMP/mystage/obd-stage."* "staging honored --staging-dir (dry-run keeps it)"
+
 # --- real backup ---
 run_out="$(bash "$HERE/scripts/backup.sh" --dest "$TMP" --name obdtest --yes 2>&1)"; rc=$?
 assert_exit "$rc" "0" "backup.sh exits 0"

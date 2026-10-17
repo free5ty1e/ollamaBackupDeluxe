@@ -12,6 +12,11 @@ const LOCAL_ENGINES = ['http://127.0.0.1:8686', 'http://localhost:8686'];
 let ENGINE_MODE = 'detecting';   // local | remote | guide
 let engineProbeTimer = null;
 
+function pagesBootstrapUrl() {
+  // bootstrap.sh lives at the Pages site root (same place as index.html)
+  return location.origin + location.pathname.replace(/\/[^/]*$/, '/') + 'bootstrap.sh';
+}
+
 function repoUrl() {
   if (typeof OBD_REPO_URL !== 'undefined' && OBD_REPO_URL) return OBD_REPO_URL;
   // project Pages: https://owner.github.io/repo/… → derive; custom domains: give up gracefully
@@ -69,6 +74,8 @@ function showGuide() {
   }
   const originLine = document.getElementById('guide-origin');
   if (originLine) originLine.textContent = location.origin;
+  const one = document.getElementById('guide-oneliner');
+  if (one) one.textContent = `curl -fsSL ${pagesBootstrapUrl()} | bash`;
   refreshSystem();
 }
 
@@ -199,6 +206,7 @@ $('bk-start').onclick = async () => {
     includeNodeDist: $('bk-nodedist').checked,
     devcontainerKit: $('bk-dc').checked,
     includeLogs: $('bk-logs').checked,
+    stagingDir: $('bk-staging') ? $('bk-staging').value.trim() || undefined : undefined,
   };
   try {
     await api('/api/backup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -315,3 +323,13 @@ $('ex-path').addEventListener('keydown', (e) => { if (e.key === 'Enter') browse(
 
 // ---------------------------------------------------------------------------
 resolveEngine();
+
+// Guide: copy the one-command setup to the clipboard
+document.addEventListener('click', (e) => {
+  if (e.target && e.target.id === 'guide-copy') {
+    const cmd = ($('guide-oneliner') || {}).textContent || '';
+    navigator.clipboard.writeText(cmd).then(
+      () => { e.target.textContent = 'Copied ✓'; setTimeout(() => { e.target.textContent = 'Copy command'; }, 2000); },
+      () => { /* clipboard denied — user selects manually */ });
+  }
+});

@@ -41,9 +41,11 @@ The same static files serve three auto-detected modes (see `app.js` `resolveEngi
   `http://127.0.0.1:8686` + `http://localhost:8686`; if the local engine was started with
   `OBD_ALLOWED_ORIGIN="<pages origin>"` (CORS, opt-in, never `*`), the hosted UI drives it fully
   (system panel, browse, jobs). A green "connected" banner replaces the guide.
-- **guide** — no engine reachable: setup walkthrough (release download link baked via
-  `config.js` → `OBD_REPO_URL` at Pages build time, start command, localhost link); retries the
-  probe every 8 s and auto-connects once the user starts the app.
+- **guide** — no engine reachable: setup walkthrough with a **one-command bootstrap**
+  (`curl -fsSL <pages>/bootstrap.sh | bash` — `scripts/bootstrap-remote.sh` with `PAGES_ORIGIN`
+  and `REPO_URL` baked at Pages build time; downloads the latest release to
+  `~/.ollama-backup-deluxe` and starts the engine with `OBD_ALLOWED_ORIGIN` preset), plus the
+  manual release download; retries the probe every 8 s and auto-connects once the engine starts.
 
 Security: CORS is opt-in per origin (`OBD_ALLOWED_ORIGIN`); unset = same-origin only. Mixed
 content is fine — browsers treat `http://127.0.0.1` as trustworthy even from `https` pages.

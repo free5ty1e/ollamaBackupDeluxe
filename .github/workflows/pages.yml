@@ -35,6 +35,11 @@ jobs:
           cat > site/config.js <<EOF
           window.OBD_REPO_URL = "https://github.com/${{ github.repository }}";
           EOF
+          # One-command setup script, with the Pages origin + repo baked in
+          sed -e "s|__PAGES_ORIGIN__|https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}|" \
+              -e "s|__REPO_URL__|${{ github.server_url }}/${{ github.repository }}|" \
+              scripts/bootstrap-remote.sh > site/bootstrap.sh
+          chmod +x site/bootstrap.sh
           # Jekyll renders the markdown knowledge base; the app files pass through verbatim
           cat > site/_config.yml <<'EOF'
           title: Ollama Backup Deluxe

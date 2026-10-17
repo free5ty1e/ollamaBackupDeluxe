@@ -30,9 +30,9 @@ when answering queries. (Pattern source: [[sources/llm-wiki-pattern]].)
 ## Architecture (this tool)
 
 - [[architecture/backup-archive-layout]] — exact .7z contents: staging names → restore destinations.
-- [[architecture/backup-flow]] — preflight → symlink staging → 7zz → sidecars; options; guards.
+- [[architecture/backup-flow]] — preflight → symlink staging (no data copies; pinnable dir) → 7zz → sidecars; options; guards.
 - [[architecture/restore-flow]] — quit → extract → rename-aside → reinstall → symlinks → verify.
-- [[architecture/webapp]] — zero-dependency server, endpoints, job runner, file explorer; Pages hosting modes (local/remote/guide).
+- [[architecture/webapp]] — zero-dependency server, endpoints, job runner, file explorer; Pages modes (local/remote/guide) + one-command bootstrap.
 - [[architecture/devcontainer-kit]] — secondary restore: Linux toolset kit (ollama CLI + harnesses, no models), captured online, restored offline.
 
 ## Runbooks (do-this-when procedures)

@@ -109,14 +109,22 @@ password once (macOS GUI prompt).
 The project's Pages site serves the **same UI** (relative assets, three auto-detected modes):
 
 1. **Local** — opened from the engine itself: full function.
-2. **Remote** — the Pages UI *drives your local engine* if you start it with
-   `OBD_ALLOWED_ORIGIN="https://<owner>.github.io" ./start-webapp.sh`
+2. **Remote** — the Pages UI *drives your local engine*: the guide offers a one-command setup
+   (`curl -fsSL <pages>/bootstrap.sh | bash` — downloads the latest release, installs to
+   `~/.ollama-backup-deluxe`, starts the engine pre-authorized for the Pages origin), after which
+   the hosted page auto-connects and gives full backup AND restore from the browser.
+   Manual equivalent: `OBD_ALLOWED_ORIGIN="https://<owner>.github.io" ./start-webapp.sh`
    (a green "connected" banner appears; never set the origin to `*`).
 3. **Guide** — no engine reachable: a setup walkthrough with a direct
    **Download the latest release** link, the two-line start command, and the wiki/docs beside it.
 
 Pages deploys on every push to `main` (`.github/workflows/pages.yml`); the app UI is served at
 the site root with `llm-wiki/` and `docs/` rendered beside it.
+
+Staging note: backups stage **symlinks**, not copies — the 61 GB of models are read through the
+links during compression, so there is no giant temp folder. The tiny staging tree (symlinks +
+manifest + embedded tool copy) defaults to the system temp dir; pin it with
+`--staging-dir <dir>` or the web app's "Advanced" field.
 
 ## Compression note
 

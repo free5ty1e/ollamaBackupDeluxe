@@ -109,3 +109,9 @@ main { max-width: 980px; margin: 0 auto; padding: 26px 28px 60px; }
   white-space: pre-wrap; word-break: break-all; }
 .muted { color: var(--muted); }
 .guide-body a.btn { text-decoration: none; display: inline-block; }
+
+.quicksetup { background: var(--panel2); border: 1px solid var(--line); border-radius: 10px;
+  padding: 12px 14px; margin: 10px 0 14px; font-size: 13px; }
+.quicksetup pre { margin: 8px 0; }
+details.opt summary { cursor: pointer; color: var(--muted); }
+details.opt input[type=text] { margin-top: 6px; }

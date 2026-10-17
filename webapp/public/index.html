@@ -28,8 +28,15 @@
     <div class="guide-body">
       <p>For security, no web page can read your disk or run scripts — the backup engine is a
       small local app. Setup takes about a minute:</p>
+      <div class="quicksetup">
+        <b>Recommended — one command</b> (downloads the latest release, installs it, and starts the
+        engine authorized for this page — no manual steps):
+        <pre class="log inline" id="guide-oneliner"></pre>
+        <button id="guide-copy" class="btn small">Copy command</button>
+        <span class="muted">then reload this page — it connects automatically</span>
+      </div>
       <ol class="steps">
-        <li><a id="guide-download" class="btn primary hidden" href="#">⬇ Download the latest release</a>
+        <li>Manual alternative: <a id="guide-download" class="btn primary hidden" href="#">⬇ Download the latest release</a>
             <span id="guide-nodl" class="muted">Grab the latest <code>ollama-backup-deluxe-vX-macos.zip</code> from this project's GitHub Releases.</span></li>
         <li>Unzip it, then in Terminal:
           <pre class="log inline">cd ollama-backup-deluxe-v*-macos
@@ -99,6 +106,10 @@
       <label class="opt check"><input id="bk-nodedist" type="checkbox" checked> Include Node.js fallback runtime</label>
       <label class="opt check"><input id="bk-dc" type="checkbox" checked> Build devcontainer kit (Linux payloads — for containers that use this Mac's Ollama over the network)</label>
       <label class="opt check"><input id="bk-logs" type="checkbox" checked> Include logs</label>
+      <details class="opt"><summary class="muted">Advanced</summary>
+        <label>Staging folder <span class="muted">(tiny — symlinks + manifest only; models are read through them, never copied. Default: system temp)</span>
+        <input id="bk-staging" type="text" spellcheck="false" placeholder="optional — e.g. /Volumes/FastDisk/obd-staging"></label>
+      </details>
     </div>
     <p class="note">The archive contains its own extractor + restore scripts — restorable with no internet.
     Model weights are already-compressed data; higher levels mostly waste time.</p>

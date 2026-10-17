@@ -5,6 +5,7 @@
 # Usage:
 #   backup.sh --dest <dir> [--name <name>] [--level 0-9] [--no-node-dist]
 #             [--no-logs] [--exclude-models] [--no-quit] [--dry-run] [--yes]
+#             [--staging-dir <dir>]
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck disable=SC1091  # resolved at runtime next to this script
@@ -12,7 +13,7 @@ source "$HERE/common.sh"
 cd "$HERE/.." || exit 1
 require_macos
 
-DEST_DIR="" NAME="" LEVEL=5 NO_NODE_DIST=0 NO_LOGS=0 EXCLUDE_MODELS=0 NO_QUIT=0 DRY_RUN=0 NO_DEVCONTAINER=0
+DEST_DIR="" NAME="" LEVEL=5 NO_NODE_DIST=0 NO_LOGS=0 EXCLUDE_MODELS=0 NO_QUIT=0 DRY_RUN=0 NO_DEVCONTAINER=0 STAGING_DIR=""
 [[ "${OBD_NO_QUIT:-0}" == "1" ]] && NO_QUIT=1   # test/sandbox guard
 DCDIR=""
 while [[ $# -gt 0 ]]; do
@@ -25,6 +26,7 @@ while [[ $# -gt 0 ]]; do
     --exclude-models) EXCLUDE_MODELS=1; shift ;;
     --no-quit)        NO_QUIT=1; shift ;;
     --no-devcontainer) NO_DEVCONTAINER=1; shift ;;
+    --staging-dir)     STAGING_DIR="$2"; shift 2 ;;
     --dry-run)        DRY_RUN=1; shift ;;
     --yes|-y)         shift ;;
     -h|--help)        grep '^#' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
@@ -33,6 +35,14 @@ while [[ $# -gt 0 ]]; do
 done
 
 [[ "$LEVEL" =~ ^[0-9]$ ]] || obd_die "--level must be 0-9"
+# Staging holds only symlinks + manifests + the embedded tool copy (the 61 GB of
+# models are read through the symlinks, never copied). Default: $TMPDIR.
+if [[ -n "$STAGING_DIR" ]]; then
+  mkdir -p "$STAGING_DIR" || obd_die "cannot create staging dir: $STAGING_DIR"
+  [[ -w "$STAGING_DIR" ]] || obd_die "staging dir not writable: $STAGING_DIR"
+  export TMPDIR="${STAGING_DIR%/}"
+  obd_info "Staging location: $TMPDIR"
+fi
 obd_check_path_arg "$DEST_DIR" "--dest"
 [[ -d "$DEST_DIR" ]] || obd_die "Destination directory does not exist: $DEST_DIR"
 DEST_DIR="$(cd "$DEST_DIR" && pwd)"

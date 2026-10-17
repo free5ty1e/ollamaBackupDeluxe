@@ -53,6 +53,14 @@ Every path is overridable; restore accepts `OBD_DEST_PREFIX`. This converts "bac
 machine" into a testable product (106 automated checks run against fixtures, CI on GitHub
 macOS runners). See [[reference/paths]].
 
+## D17 — One-command bootstrap from Pages (closest legal "browse and go")
+A web page can never read 61 GB from disk or reinstall apps — the browser sandbox is absolute.
+The maximum achievable "browse to Pages and go" is: guide mode offers a single copy-paste command
+(`curl … | bash`, the standard installer pattern) whose script downloads the latest release,
+installs to `~/.ollama-backup-deluxe`, and starts the engine with the Pages origin pre-authorized
+— after which the hosted UI provides full backup AND restore through remote mode. Also:
+backups stage symlinks, never data copies; staging location is pinnable (`--staging-dir`).
+
 ## D16 — GitHub Pages: static UI with engine auto-detection
 Pages can't run the engine (no server-side execution, no filesystem/process access from a web
 page) — so the Pages site serves the SAME UI files (relative assets) with three modes: local,
