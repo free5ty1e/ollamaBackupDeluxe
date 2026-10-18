@@ -283,7 +283,9 @@ async function browse(path) {
     $('ex-path').value = r.path;
     exState.here = r.path; exState.parent = r.parent;
     exState.selected = null;
-    $('ex-select').disabled = exState.mode === 'dir';
+    // dir mode: the browsed location IS the selection — button is always usable
+    // file mode: enabled once a file row is selected
+    $('ex-select').disabled = exState.mode === 'dir' ? false : true;
     list.innerHTML = r.entries.length ? '' : '<div class="ex-empty">Empty folder</div>';
     if (r.parent) {
       const up = document.createElement('div');

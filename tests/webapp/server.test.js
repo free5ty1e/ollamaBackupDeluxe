@@ -164,6 +164,12 @@ test('CORS: allowed origin echoed on API + preflight works', async () => {
   assert.equal(pre.headers['access-control-allow-methods'], 'GET, POST');
 });
 
+test('Explorer: dir mode keeps the select button usable (regression)', async () => {
+  const r = await req(PORT, 'GET', '/app.js');
+  assert.ok(r.text.includes("exState.mode === 'dir' ? false : true"),
+    'app.js must enable the select button in dir mode (bug: it stayed disabled forever)');
+});
+
 test('Static UI: relative assets + guide markup present (Pages-compatible)', async () => {
   const r = await req(PORT, 'GET', '/');
   assert.ok(r.text.includes('href="style.css"'), 'stylesheet referenced relatively');
