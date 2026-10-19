@@ -5,7 +5,7 @@
 # Usage:
 #   backup.sh --dest <dir> [--name <name>] [--level 0-9] [--no-node-dist]
 #             [--no-logs] [--exclude-models] [--no-quit] [--dry-run] [--yes]
-#             [--staging-dir <dir>]
+#             [--staging-dir <dir>] [--validate]
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck disable=SC1091  # resolved at runtime next to this script
@@ -13,7 +13,7 @@ source "$HERE/common.sh"
 cd "$HERE/.." || exit 1
 require_macos
 
-DEST_DIR="" NAME="" LEVEL=5 NO_NODE_DIST=0 NO_LOGS=0 EXCLUDE_MODELS=0 NO_QUIT=0 DRY_RUN=0 NO_DEVCONTAINER=0 STAGING_DIR=""
+DEST_DIR="" NAME="" LEVEL=5 NO_NODE_DIST=0 NO_LOGS=0 EXCLUDE_MODELS=0 NO_QUIT=0 DRY_RUN=0 NO_DEVCONTAINER=0 STAGING_DIR="" VALIDATE=0
 [[ "${OBD_NO_QUIT:-0}" == "1" ]] && NO_QUIT=1   # test/sandbox guard
 DCDIR=""
 while [[ $# -gt 0 ]]; do
@@ -27,6 +27,7 @@ while [[ $# -gt 0 ]]; do
     --no-quit)        NO_QUIT=1; shift ;;
     --no-devcontainer) NO_DEVCONTAINER=1; shift ;;
     --staging-dir)     STAGING_DIR="$2"; shift 2 ;;
+    --validate)        VALIDATE=1; shift ;;
     --dry-run)        DRY_RUN=1; shift ;;
     --yes|-y)         shift ;;
     -h|--help)        grep '^#' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
@@ -224,6 +225,7 @@ mk_stage_tree() {
   cp "$OBD_7ZZ" "$STAGE/restore-kit/7zz"
   chmod +x "$STAGE/restore-kit/7zz"
   cp "$OBD_SCRIPT_DIR/common.sh" "$OBD_SCRIPT_DIR/restore.sh" "$OBD_SCRIPT_DIR/verify.sh" "$STAGE/restore-kit/"
+  [[ -f "$OBD_SCRIPT_DIR/validate-backup.sh" ]] && cp "$OBD_SCRIPT_DIR/validate-backup.sh" "$STAGE/restore-kit/"
   write_restore_readme > "$STAGE/restore-kit/RESTORE-README.md"
   # --- project copy (self-contained kit) ---
   mkdir -p "$STAGE/project"
@@ -394,13 +396,24 @@ done
 [[ -s "$PART" ]] || obd_die "Compression produced no output"
 
 mv "$PART" "$OUT_7Z"
-sha256_file "$OUT_7Z" > "$OUT_7Z.sha256"
+# standard sidecar format ("<hash>  <name>") so `shasum -a 256 -c` works out of the box
+printf '%s  %s\n' "$(sha256_file "$OUT_7Z")" "$(basename "$OUT_7Z")" > "$OUT_7Z.sha256"
 cp "$STAGE/MANIFEST.txt" "$DEST_DIR/$NAME.manifest.txt"
 
 obd_ok "Backup complete:"
 printf '    %s  (%s)\n' "$OUT_7Z" "$(human_size "$(wc -c < "$OUT_7Z" | tr -d ' ')")"
 printf '    %s\n' "$OUT_7Z.sha256"
 printf '    %s\n' "$DEST_DIR/$NAME.manifest.txt"
+
+if [[ "$VALIDATE" == "1" ]]; then
+  obd_step "Validating the backup kit (sha256 + full CRC + structure; may take a while)…"
+  if bash "$OBD_SCRIPT_DIR/validate-backup.sh" --archive "$OUT_7Z" --7zz "$OBD_7ZZ" 2>&1 | sed -u 's/^/  validate: /'; then
+    obd_ok "Post-backup validation passed"
+  else
+    obd_err "Post-backup validation FAILED — see above; the kit should not be trusted"
+    exit 5
+  fi
+fi
 
 if [[ "$RESTART_OLLAMA" == "1" ]]; then
   obd_step "Restarting Ollama…"

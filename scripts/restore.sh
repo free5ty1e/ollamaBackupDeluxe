@@ -4,7 +4,7 @@
 #
 # Usage:
 #   restore.sh --archive <file.7z> [--7zz <path>] [--dest-prefix <dir>]
-#              [--purge-existing] [--no-start] [--yes]
+#              [--purge-existing] [--no-start] [--validate-archive] [--yes]
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck disable=SC1091  # resolved at runtime next to this script
@@ -12,7 +12,7 @@ source "$HERE/common.sh"
 cd "$HERE/.." || exit 1
 require_macos
 
-ARCHIVE="" GIVEN_7ZZ="" PURGE=0 NO_START=0 ASSUME_YES=0 NO_QUIT=0
+ARCHIVE="" GIVEN_7ZZ="" PURGE=0 NO_START=0 ASSUME_YES=0 NO_QUIT=0 VALIDATE_BEFORE=0
 [[ "${OBD_NO_QUIT:-0}" == "1" ]] && NO_QUIT=1   # test/sandbox guard
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -22,6 +22,7 @@ while [[ $# -gt 0 ]]; do
     --purge-existing) PURGE=1; shift ;;
     --no-start)       NO_START=1; shift ;;
     --no-quit)        NO_QUIT=1; shift ;;
+    --validate-archive) VALIDATE_BEFORE=1; shift ;;
     --yes|-y)         ASSUME_YES=1; shift ;;
     -h|--help)        grep '^#' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) obd_die "Unknown argument: $1 (see --help)" ;;
@@ -55,6 +56,20 @@ source "$WORK/manifest.env"
 for k in OBD_VERSION OLLAMA_HOME_PATH ARCH; do
   [[ -n "${!k:-}" ]] || obd_die "Manifest missing key: $k"
 done
+
+if [[ "$VALIDATE_BEFORE" == "1" ]]; then
+  if [[ -f "$HERE/validate-backup.sh" ]]; then
+    obd_step "Validating the kit before restoring (sha256 + full CRC + structure)…"
+    if bash "$HERE/validate-backup.sh" --archive "$ARCHIVE" --7zz "$OBD_7ZZ" 2>&1 | sed -u 's/^/  validate: /'; then
+      obd_ok "Pre-restore validation passed"
+    else
+      obd_err "Kit validation FAILED — aborting restore (nothing was changed on this machine)"
+      exit 5
+    fi
+  else
+    obd_warn "validate-backup.sh not in this kit — skipping pre-restore validation"
+  fi
+fi
 
 MANIFEST_ARCH="${ARCH:-}"; MANIFEST_HOST="${HOSTNAME:-}"
 OBD_SANDBOX=0; [[ -n "${OBD_DEST_PREFIX:-}" ]] && OBD_SANDBOX=1

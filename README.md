@@ -126,6 +126,16 @@ links during compression, so there is no giant temp folder. The tiny staging tre
 manifest + embedded tool copy) defaults to the system temp dir; pin it with
 `--staging-dir <dir>` or the web app's "Advanced" field.
 
+## Validating a backup kit
+
+`scripts/validate-backup.sh --archive <kit>.7z` proves a kit without restoring: sha256 vs
+sidecar, **every CRC in the archive**, manifest completeness, kit structure, and sample
+verification of content-addressed model blobs (a blob's sha256 must match its name). Directional
+comparison against the live machine flags kits that predate new pulls. The web app adds a
+**VALIDATE A BACKUP KIT** button, a "Validate after backup" checkbox, and a "Validate before
+restoring" checkbox — all running the same script. Expect the full pass to read the whole kit
+(~10–20 min for 51 GB); `--quick` skips the two full-archive passes.
+
 ## Compression note
 
 Default is 7-Zip level **5** ("normal" — the recommended setting). Model weights are

@@ -16,8 +16,11 @@ Purpose: how backup.sh turns the live system into a kit — stages, guards, opti
    Per-entry links let us exclude `~/.ollama/cache`, optional logs/models, and `install/staging`.
 4. **Manifests** — `manifest.env` (contract: [[architecture/backup-archive-layout]]) + `MANIFEST.txt`.
 5. **Compress** — `7zz a -mx=<level> -mmt=on -bso0 -bsp1` → `<out>.part.7z`, then atomic rename;
-   progress CR-lines sanitized into the job log. Sidecars: `.sha256` (`shasum -a 256`), `.manifest.txt`.
-6. **Restart** — if backup quit Ollama (default, for db consistency), relaunch it.
+   progress CR-lines sanitized into the job log. Sidecar `.sha256` in standard
+   `<hash>  <name>` format (`shasum -c` works out of the box), `.manifest.txt`.
+6. **Validate (optional, `--validate`)** — `scripts/validate-backup.sh` runs inline: sha256,
+   full CRC test, manifest/structure checks, content-addressed blob sampling; failure exits 5.
+7. **Restart** — if backup quit Ollama (default, for db consistency), relaunch it.
 
 ## Options
 

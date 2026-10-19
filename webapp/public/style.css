@@ -115,3 +115,7 @@ main { max-width: 980px; margin: 0 auto; padding: 26px 28px 60px; }
 .quicksetup pre { margin: 8px 0; }
 details.opt summary { cursor: pointer; color: var(--muted); }
 details.opt input[type=text] { margin-top: 6px; }
+
+.hero.secondary { grid-template-columns: 1fr; margin-top: -6px; }
+.action.validate .icon { color: var(--green); }
+.action.validate { padding: 16px 24px; }

@@ -65,6 +65,14 @@
     </button>
   </section>
 
+  <section class="hero secondary">
+    <button id="btn-validate" class="action validate">
+      <span class="icon">✓</span>
+      <span class="label">VALIDATE A BACKUP KIT</span>
+      <span class="hint">Integrity, manifest, structure, content-addressed blobs — without restoring</span>
+    </button>
+  </section>
+
   <section id="job-panel" class="panel hidden">
     <div class="panel-head">
       <span id="job-title">Job</span>
@@ -104,6 +112,7 @@
         </select>
       </label>
       <label class="opt check"><input id="bk-nodedist" type="checkbox" checked> Include Node.js fallback runtime</label>
+      <label class="opt check"><input id="bk-validate" type="checkbox" checked> Validate the archive after backup (recommended — adds a full integrity pass)</label>
       <label class="opt check"><input id="bk-dc" type="checkbox" checked> Build devcontainer kit (Linux payloads — for containers that use this Mac's Ollama over the network)</label>
       <label class="opt check"><input id="bk-logs" type="checkbox" checked> Include logs</label>
       <details class="opt"><summary class="muted">Advanced</summary>
@@ -130,6 +139,7 @@
       <button class="btn" data-explorer="rs-archive" data-mode="file">Browse…</button>
     </div>
     <div id="rs-info" class="archive-info hidden"></div>
+    <label class="opt check"><input id="rs-validate" type="checkbox" checked> Validate the kit before restoring (recommended — sha256 + full integrity)</label>
     <label>Restore target</label>
     <label class="opt"><select id="rs-mode">
       <option value="machine" selected>This machine (macOS) — full restore incl. models</option>
@@ -146,6 +156,25 @@
     <div class="dialog-actions">
       <button class="btn" data-close>Cancel</button>
       <button id="rs-start" class="btn primary" disabled>Start restore</button>
+    </div>
+  </div>
+</div>
+
+<!-- Validate modal -->
+<div id="modal-validate" class="modal hidden">
+  <div class="dialog">
+    <h2>Validate a backup kit</h2>
+    <label>Backup archive (.7z)</label>
+    <div class="pathrow">
+      <input id="va-archive" type="text" spellcheck="false" placeholder="/Volumes/…/ollama-backup-….7z">
+      <button class="btn" data-explorer="va-archive" data-mode="file">Browse…</button>
+    </div>
+    <p class="note">Runs the full validator: sha256 vs sidecar, every CRC in the archive,
+    manifest completeness, kit structure, and sample verification of content-addressed model
+    blobs. <span class="muted">On a large kit this reads the whole archive — several minutes.</span></p>
+    <div class="dialog-actions">
+      <button class="btn" data-close>Cancel</button>
+      <button id="va-start" class="btn primary">Start validation</button>
     </div>
   </div>
 </div>

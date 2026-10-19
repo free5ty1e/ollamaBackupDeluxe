@@ -42,8 +42,12 @@ EOF
   touch "$oh/onboarding-v1.completed"
   echo "log line" > "$oh/logs/server.log"
   echo "cache-entry" > "$oh/cache/blob.tmp"
-  echo "weights" > "$oh/models/blobs/sha256-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-  echo "weights2" > "$oh/models/blobs/sha256-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  # blobs are content-addressed: name them by the sha256 of their content so the
+  # validator's blob-verification check works against fixtures too
+  h1="$(printf 'weights' | shasum -a 256 | awk '{print $1}')"
+  h2="$(printf 'weights2' | shasum -a 256 | awk '{print $1}')"
+  printf 'weights' > "$oh/models/blobs/sha256-$h1"
+  printf 'weights2' > "$oh/models/blobs/sha256-$h2"
   echo '{}' > "$oh/models/manifests/registry.ollama.ai/library/testmodel/1.0"
   echo '{}' > "$oh/models/manifests/registry.ollama.ai/user42/custom/3.1"
   echo '{}' > "$oh/models/manifests-v2/ollama.com/library/other/2.0"

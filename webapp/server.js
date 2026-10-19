@@ -179,7 +179,8 @@ let job = null;
 function startJob(type, args) {
   if (job && job.status === 'running') return { error: 'another job is already running' };
   const id = Date.now().toString(36);
-  const script = { backup: 'backup.sh', restore: 'restore.sh', 'restore-devcontainer': 'restore-devcontainer.sh', prereqs: 'prerequisites.sh' }[type] || 'prerequisites.sh';
+  const script = { backup: 'backup.sh', restore: 'restore.sh', 'restore-devcontainer': 'restore-devcontainer.sh',
+    validate: 'validate-backup.sh', prereqs: 'prerequisites.sh' }[type] || 'prerequisites.sh';
   const logFile = path.join(LOG_DIR, `${new Date().toISOString().replace(/[:.]/g, '-')}-${type}.log`);
   const child = spawn('/bin/bash', [path.join(SCRIPTS, script), ...args], {
     env: { ...process.env, OBD_NONINTERACTIVE: '1' }, cwd: PROJECT_DIR,
@@ -244,6 +245,15 @@ const server = http.createServer(async (req, res) => {
       if (!job || job.status !== 'running') return json(res, 400, { error: 'no running job' });
       job.cancel(); return json(res, 200, { ok: true });
     }
+    if (req.method === 'POST' && p === '/api/validate') {
+      const body = await readBody(req);
+      const archive = safePath(body.archive);
+      if (!archive || !exists(archive) || isDir(archive)) return json(res, 400, { error: 'invalid archive path' });
+      const args = ['--archive', archive];
+      if (body.quick) args.push('--quick');
+      const r = startJob('validate', args);
+      return json(res, r.error ? 409 : 200, r);
+    }
     if (req.method === 'POST' && (p === '/api/backup' || p === '/api/restore' || p === '/api/prereqs')) {
       const body = p === '/api/prereqs' ? {} : await readBody(req);
       let args = [];
@@ -257,6 +267,7 @@ const server = http.createServer(async (req, res) => {
         if (body.includeNodeDist === false) args.push('--no-node-dist');
         if (body.includeLogs === false) args.push('--no-logs');
         if (body.devcontainerKit === false) args.push('--no-devcontainer');
+        if (body.validate) args.push('--validate');
         if (body.stagingDir && typeof body.stagingDir === 'string' && body.stagingDir.length < 500
             && !body.stagingDir.includes('\0')) {
           args.push('--staging-dir', body.stagingDir);
@@ -271,6 +282,7 @@ const server = http.createServer(async (req, res) => {
           return json(res, r.error ? 409 : 200, r);
         }
         args = ['--archive', archive, '--yes'];
+        if (body.validateBefore) args.push('--validate-archive');
       }
       const r = startJob(p.slice(5), args);
       return json(res, r.error ? 409 : 200, r);

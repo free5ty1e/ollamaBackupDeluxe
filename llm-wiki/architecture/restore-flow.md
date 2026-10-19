@@ -7,6 +7,9 @@ Purpose: how restore.sh rebuilds a machine from a kit — order, safety, and ver
 1. **Resolve 7zz**: `--7zz` → `OBD_KIT_7ZZ` → `bin/7zz-<arch>`/`bin/7zz` → PATH. Extract the
    archive to a temp dir; dequarantine; `source manifest.env`; validate required keys; warn on
    arch mismatch (an arm64 kit will not run on Intel).
+1b. **Validate (optional, `--validate-archive`)** — `scripts/validate-backup.sh` runs BEFORE
+    anything is touched ([[architecture/validate-backup]]); failure aborts with nothing changed
+    on this machine.
 2. **Quit Ollama** (real mode only; skipped in `OBD_DEST_PREFIX` sandboxes and `--no-quit`).
 3. **Ollama app**: existing bundle *renamed* to `<path>.pre-restore-<ts>` (or removed with
    `--purge-existing`) — never silently deleted. If the rename is refused (App Management TCC),

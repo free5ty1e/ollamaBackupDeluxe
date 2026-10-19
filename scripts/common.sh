@@ -228,9 +228,13 @@ obd_require_7zz() {
 # per-IP for anonymous calls — runners exhaust them quickly), with graceful
 # failure (caller decides what to do when the API is unreachable).
 obd_gh_api() { # obd_gh_api <url> -> body on stdout, rc nonzero on failure
-  local auth=()
-  [[ -n "${GITHUB_TOKEN:-}" ]] && auth=(-H "Authorization: Bearer ${GITHUB_TOKEN}")
-  curl -fsSL --max-time 30 "${auth[@]}" "$1" 2>/dev/null
+  # NOTE: no bash arrays here — macOS ships bash 3.2 where "${arr[@]}" on an
+  # empty array is an "unbound variable" under set -u.
+  if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+    curl -fsSL --max-time 30 -H "Authorization: Bearer ${GITHUB_TOKEN}" "$1" 2>/dev/null
+  else
+    curl -fsSL --max-time 30 "$1" 2>/dev/null
+  fi
 }
 
 # 7zz release tag resolution: API first, pinned fallback when rate-limited/offline

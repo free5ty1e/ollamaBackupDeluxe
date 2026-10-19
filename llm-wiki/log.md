@@ -89,3 +89,17 @@ Append-only. Format: `## [YYYY-MM-DD] <op> | <title>` — parseable with
   release via API (page-scrape fallback), installs to ~/.ollama-backup-deluxe, starts the engine
   with OBD_ALLOWED_ORIGIN preset so the hosted UI auto-connects for full backup/restore.
   Guide mode now shows the copyable one-liner with a copy button; D17 recorded.
+
+## [2026-10-12] build | validate-backup.sh + web app validate wiring; first REAL kit validated
+- User's first real 51 GB backup (ollama-backup-20261016-224704.7z) validated end-to-end:
+  sha256 match, full CRC pass, 16 structural entries, 1639/1639 blobs, 7/7 manifest files,
+  3 content-addressed blob samples verified, ollama binary byte-identical. ALL GREEN.
+- scripts/validate-backup.sh codifies the procedure (18 checks); web app: VALIDATE button,
+  POST /api/validate, "Validate after backup" (--validate) and "Validate before restoring"
+  (--validate-archive) checkboxes; backup --validate exits 5 on failed validation.
+- Sidecar .sha256 now standard "<hash>  <name>" (shasum -c compatible); validator accepts both.
+- Fixed from the real backup log: obd_gh_api empty-array crash on macOS bash 3.2 (set -u),
+  silent curl failures in dc capture (stderr now visible), em-dash-after-$var parsing bug.
+- Directional live comparison: kit extras = advisory (Ollama pruned manifests-v2 after the
+  user's backup — real observation), kit missing live pulls = fail.
+- Tests: 202 green (test-validate: 19 checks incl. corrupt/truncated/mismatch/non-OBD kits).

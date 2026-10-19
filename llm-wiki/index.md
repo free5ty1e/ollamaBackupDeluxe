@@ -33,6 +33,7 @@ when answering queries. (Pattern source: [[sources/llm-wiki-pattern]].)
 - [[architecture/backup-flow]] — preflight → symlink staging (no data copies; pinnable dir) → 7zz → sidecars; options; guards.
 - [[architecture/restore-flow]] — quit → extract → rename-aside → reinstall → symlinks → verify.
 - [[architecture/webapp]] — zero-dependency server, endpoints, job runner, file explorer; Pages modes (local/remote/guide) + one-command bootstrap.
+- [[architecture/validate-backup]] — kit validation without restoring: sha256, CRCs, structure, content-addressed blob sampling; web app wiring.
 - [[architecture/devcontainer-kit]] — secondary restore: Linux toolset kit (ollama CLI + harnesses, no models), captured online, restored offline.
 
 ## Runbooks (do-this-when procedures)

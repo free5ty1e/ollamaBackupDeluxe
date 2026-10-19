@@ -178,6 +178,7 @@ async function pollJob() {
 $('btn-cancel').onclick = async () => { try { await api('/api/job/cancel', { method: 'POST' }); } catch {} };
 $('btn-refresh').onclick = refreshSystem;
 $('btn-backup').onclick = () => openModal('modal-backup');
+$('btn-validate').onclick = () => openModal('modal-validate');
 $('btn-restore').onclick = () => { $('rs-info').classList.add('hidden'); $('rs-start').disabled = true; openModal('modal-restore'); };
 $('rs-mode').addEventListener('change', () => {
   $('rs-dc-extra').classList.toggle('hidden', $('rs-mode').value !== 'devcontainer');
@@ -205,6 +206,7 @@ $('bk-start').onclick = async () => {
     level: Number($('bk-level').value),
     includeNodeDist: $('bk-nodedist').checked,
     devcontainerKit: $('bk-dc').checked,
+    validate: $('bk-validate').checked,
     includeLogs: $('bk-logs').checked,
     stagingDir: $('bk-staging') ? $('bk-staging').value.trim() || undefined : undefined,
   };
@@ -252,12 +254,25 @@ $('rs-start').onclick = async () => {
     : 'this machine (full restore incl. models)';
   if (!confirm(`Restore ${target} from:\n${archive}\n\nExisting installs will be moved aside. Continue?`)) return;
   try {
-    const body = { archive, mode };
+    const body = { archive, mode, validateBefore: $('rs-validate').checked };
     if (mode === 'devcontainer') body.ollamaHost = $('rs-host').value.trim() || undefined;
     await api('/api/restore', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     closeModal('modal-restore');
     showJob(mode === 'devcontainer' ? 'Devcontainer restore in progress' : 'Restore in progress');
   } catch (e) { alert(`Could not start restore: ${e.message}`); }
+};
+
+// ---------------------------------------------------------------------------
+// Validate flow
+// ---------------------------------------------------------------------------
+$('va-start').onclick = async () => {
+  const archive = $('va-archive').value.trim();
+  if (!archive.toLowerCase().endsWith('.7z')) { alert('Pick a .7z backup kit first.'); return; }
+  try {
+    await api('/api/validate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ archive }) });
+    closeModal('modal-validate');
+    showJob('Validating backup kit');
+  } catch (e) { alert(`Could not start validation: ${e.message}`); }
 };
 
 // ---------------------------------------------------------------------------

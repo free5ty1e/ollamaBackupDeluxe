@@ -27,8 +27,8 @@ DC_COMPONENTS=""
 ok()   { DC_COMPONENTS="$DC_COMPONENTS $1"; obd_ok "$1 payload captured"; }
 skip() { obd_warn "devcontainer payload '$1' SKIPPED: $2"; }
 
-fetch() { # fetch <url> <out> — curl with retries
-  curl -fL --retry 3 --max-time 3600 -o "$out_tmp" "$url" 2>/dev/null
+fetch() { # fetch <url> <out> — curl with retries; errors visible in the job log
+  curl -fsS --retry 3 --retry-delay 2 --max-time 3600 -o "$out_tmp" "$url"
 }
 out_tmp=""; url=""
 
