@@ -2,6 +2,21 @@
 
 Purpose: full walkthrough for the actual scenario — brand-new macOS on the new MacBook, wifi off.
 
+## Rehearsal on an existing machine (testbed purge)
+
+An M1 Max with the same stack doubles as the testbed: purge everything the restore installs,
+then rehearse the offline restore from the USB stick — no second Mac needed.
+
+```bash
+scripts/testbed-purge.sh          # dry-run listing (sizes included)
+scripts/testbed-purge.sh --yes    # PURGE — ollama incl. all models, pi, claude, opencode, node chain
+scripts/testbed-purge.sh --audit  # component audit to paste back for review
+```
+
+Then follow the in-container/new-machine steps below with airplane mode on. The purge script is
+sandbox-tested (36 checks); it never touches Homebrew itself, unrelated formulae, other
+`~/.config` apps, or shell rc files.
+
 ## One-time (on the SOURCE Mac, online)
 
 1. `./scripts/prerequisites.sh` (installs 7zz into `bin/`, caches the Node fallback tarball).
@@ -32,7 +47,7 @@ tool + the embedded `restore-kit/`).
 
 - [ ] `ollama list` shows the manifest's model set
 - [ ] a model generates a completion (Ollama app running, API healthy)
-- [ ] `pi --version` matches the manifest
+- [ ] `pi --version`, `claude --version`, `opencode --version` match the manifest
 - [ ] `scripts/verify.sh --manifest … --expect-server` exits 0
 - [ ] old-machine asides removed; backup media moved to cold storage
 

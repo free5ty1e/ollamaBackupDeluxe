@@ -1,5 +1,31 @@
 # AGENTS.md — Ollama Backup Deluxe
 
+> **New to this repository?** Read `llm-wiki/introduction.md` first — it is the briefing /
+> initial prompt: project purpose, structure, current state, and your first five actions.
+
+## Repository rules (binding for every session)
+
+### Git workflow — STRICT
+- **NEVER perform any git write operation other than `git add` (staging).**
+- Forbidden without exception flow: `git commit`, `git push`, `git tag`, `git branch` writes,
+  `git checkout -- <file>`/`git restore` (destructive), `git reset`, `git rebase`, `git merge`.
+- **The user commits — always.** After finishing a cycle of changes:
+  1. `git add -A` (or targeted `git add <paths>` when appropriate),
+  2. suggest a commit message (conventional, imperative, ≤ 72 chars subject + body bullets),
+  3. present the changes for review. The user runs the commit.
+- If the user explicitly asks for a special git write action (e.g. "commit this for me"),
+  **confirm at least twice** with the user before executing, then perform only that exact action.
+
+### Documentation freshness — before presenting changes
+- After EVERY work cycle, before messaging the user with results:
+  update `README.md` if user-facing behavior changed, and ingest into `llm-wiki/` per
+  `llm-wiki/SCHEMA.md` (topic pages + `index.md` + append to `log.md`).
+- Update `docs/plans/` checklists when plan milestones complete.
+
+### Safety invariants (code-level, also binding)
+- Restore never deletes: renames existing targets aside. `OBD_*` env overrides for every path.
+- Web app stays zero-npm-dependency. Scripts log via common.sh helpers.
+
 ## Project
 
 Tools (CLI scripts + zero-dependency web app) to create **fully offline-restorable** backups of

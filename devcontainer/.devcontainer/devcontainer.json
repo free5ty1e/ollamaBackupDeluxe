@@ -1,0 +1,6 @@
+{
+  "name": "obd-devcontainer-validate",
+  "build": { "dockerfile": "../Dockerfile" },
+  "remoteUser": "root",
+  "postCreateCommand": "echo 'Rehearse: tar -xzf /kit/<name>-devcontainer.tar.gz -C /tmp && cd /tmp/obd-devcontainer && ./restore-devcontainer.sh --archive /kit/<name>.7z --yes'"
+}

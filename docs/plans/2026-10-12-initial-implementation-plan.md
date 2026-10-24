@@ -351,6 +351,12 @@ Three workflows:
 | `e2e-restore` | macos-14 | e2e backup artifact → `restore.sh` with `OBD_DEST_PREFIX` → `verify.sh` green |
 | `webapp` | macos-14 | `node --test tests/webapp/` against current LTS Node |
 | `release-smoke` | macos-14 | build the §4b bundle (same script release.yml calls), unzip to clean dir, run `start-webapp.sh` in headless mode (no browser), hit `/api/system` |
+| `coverage` | macos-14 | `tests/coverage.sh` — full suite under kcov (bash line coverage incl. child processes) + node:test coverage → `coverage/coverage-report.md`, uploaded as artifact and echoed to the job summary |
+
+Notes: public repo ⇒ macOS runners are free; scripts only need bash + system tools;
+`prerequisites.sh` acquires 7zz in CI (network available there) and tests assert from `bin/`.
+GitHub API calls (7-Zip release lookup) authenticate with `GITHUB_TOKEN` and fall back to a
+pinned tag when the API is unavailable — anonymous runner IPs exhaust the 60 req/h limit fast.
 
 Notes: public repo ⇒ macOS runners are free; scripts only need bash + system tools;
 `prerequisites.sh` acquires 7zz in CI (network available there) and tests assert from `bin/`.
@@ -366,11 +372,13 @@ Notes: public repo ⇒ macOS runners are free; scripts only need bash + system t
 
 ### `.github/workflows/pages.yml` — push to main
 
-Publishes the **llm-wiki + docs** as a browsable GitHub Pages site:
-1. Stage `llm-wiki/**`, `docs/**`, `README.md` into `pages/` with a Jekyll-compatible `_config.md`
-   (GitHub Pages renders Markdown natively — no npm toolchain needed)
-2. Generate `pages/index.md` table of contents from `llm-wiki/index.md`
-3. `actions/upload-pages-artifact` + `actions/deploy-pages`
+Publishes the **web app UI at the site root** plus **llm-wiki + docs** as a browsable site:
+1. Stage `webapp/public/*` at the site root (relative assets; UI auto-detects engine presence),
+   `llm-wiki/**`, `docs/**`, `README.md`; bake `config.js` with the repo URL (release links)
+2. Jekyll renders the markdown; app files pass through verbatim
+3. UI modes: local (same-origin engine) / remote (Pages UI drives the local engine via
+   opt-in `OBD_ALLOWED_ORIGIN` CORS) / guide (setup walkthrough + latest-release download)
+4. `actions/upload-pages-artifact` + `actions/deploy-pages`
 
 ### Tagging a release (human workflow)
 
@@ -413,11 +421,28 @@ git tag v1.0.0 && git push origin v1.0.0   # → release.yml builds + publishes 
 - [x] `README.md`
 - [x] `llm-wiki/*` (schema, index, log, 16 pages)
 - [x] ShellCheck clean across scripts + tests (CI parity)
+- [x] Addendum A: harness expansion + devcontainer kit (implemented, 179 tests green)
 - [ ] User-run: real 61 GB kit to external drive (§8.3)
 - [ ] First tagged release `v0.1.0` → verify release.yml artifact
 - [ ] Real restore drill on target hardware
 
 ---
+
+## 12. Addendum A — harness expansion + devcontainer kit (2026-10-12, post-v0 planning)
+
+**Harness expansion.** Backups now also cover Claude Code (native install: `~/.local/share/claude`
+versioned binaries, absolute launcher symlink, `~/.claude` data) and OpenCode
+(`~/.opencode` binary + post-first-run config/session/state incl. plugin node_modules; cache
+excluded; selective slice of `~/.config`), plus shell rc files for PATH wiring.
+
+**Devcontainer kit (secondary restore).** Every backup additionally writes
+`<name>-devcontainer.tar.gz`: Linux ollama CLI (version-pinned, extracted from the official
+tar.zst), Node/Claude/OpenCode Linux builds (claude checksum-verified via the official manifest),
+Linux 7zz, configs, and a Linux restore script. Restored inside a Linux devcontainer it installs
+the toolset with NO models and wires `OLLAMA_HOST` so `ollama launch pi` / `ollama launch
+claude` talk to the Mac host over the network. Capture happens on the host at backup time
+(cached, best-effort per payload, `--no-devcontainer` to skip); restore is fully offline.
+`devcontainer/` holds an example validation container. Constraint: glibc images.
 
 ## 12. Risks & mitigations
 

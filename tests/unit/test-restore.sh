@@ -39,11 +39,27 @@ BREW="$D$FIX/brew"
 assert_file_exists "$APPD/Contents/Resources/ollama" "app bundle restored"
 assert_file_exists "$OHOMED/config.json" "ollama home restored"
 assert_file_exists "$OHOMED/models/manifests/registry.ollama.ai/library/testmodel/1.0" "models manifests restored"
-assert_file_exists "$OHOMED/models/blobs/sha256-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" "model blobs restored"
+BH1="$(printf 'weights' | shasum -a 256 | awk '{print $1}')"
+assert_file_exists "$OHOMED/models/blobs/sha256-$BH1" "model blobs restored"
 assert_file_exists "$PID/agent/install/releases/1.2.3/node_modules/.bin/pi" "pi managed release restored"
 assert_file_exists "$ASD/db.sqlite" "app-support restored"
 assert_file_exists "$BREW/Cellar/node/9.9.9/bin/node" "node cellar restored"
 assert_file_exists "$BREW/Cellar/icu4c@9/9/lib/libicuuc.9.dylib" "node dep cellar restored"
+
+# --- Claude Code / OpenCode restored ---
+CLD="$D$FIX/fake-home/.local/share/claude"
+assert_file_exists "$CLD/versions/2.1.251" "claude runtime restored"
+assert_file_exists "$D$FIX/fake-home/.claude/settings.json" "claude data restored"
+assert_file_exists "$D$FIX/fake-home/.opencode/bin/opencode" "opencode restored"
+assert_file_exists "$D$FIX/fake-home/.config/opencode/opencode.jsonc" "opencode config restored"
+assert_file_exists "$D$FIX/fake-home/.local/share/opencode/opencode.db" "opencode session db restored"
+assert_file_exists "$D$FIX/fake-home/.local/state/opencode/prompt-history.jsonl" "opencode state restored"
+[[ ! -e "$D$FIX/fake-home/.config/filezilla" ]] && _pass "unrelated ~/.config apps not restored" || _fail "unrelated ~/.config apps not restored"
+assert_eq "$("$CLD/versions/2.1.251" --version)" "2.1.251 (Claude Code)" "restored claude binary runs"
+assert_eq "$("$D$FIX/fake-home/.opencode/bin/opencode" --version)" "1.19.0" "restored opencode runs"
+assert_symlink_target "$D$FIX/fake-home/.local/bin/claude" "$CLD/versions/2.1.251" "claude launcher symlink (absolute target remapped)"
+assert_file_exists "$D$FIX/fake-home/.zshrc" "shell rc restored (no pre-existing file)"
+assert_contains "$(cat "$D$FIX/fake-home/.zshrc")" ".opencode/bin" "shell rc content intact"
 
 # --- symlinks recreated ---
 assert_symlink_target "$D/usr/local/bin/ollama" "$APPD/Contents/Resources/ollama" "ollama CLI symlink"
@@ -67,6 +83,7 @@ assert_contains "$out2" "Moving existing" "second restore renames existing aside
 assert_dir_exists "$APPD.pre-restore-"* "old app moved aside (glob)"
 assert_dir_exists "$OHOMED.pre-restore-"* "old ollama home moved aside"
 assert_dir_exists "$PID.pre-restore-"* "old pi home moved aside"
+assert_file_exists "$D$FIX/fake-home/.zshrc.obd-backup" "second restore: existing .zshrc backed up as .obd-backup"
 assert_file_exists "$APPD/Contents/Resources/ollama" "fresh app in place after second restore"
 
 # --- purge mode ---
@@ -85,6 +102,13 @@ vout="$(OBD_OLLAMA_APP="$APPD" \
   OBD_PI_HOME="$PID" \
   OBD_PI_LAUNCHER="$D$FIX/fake-home/.local/bin/pi" \
   OBD_BREW_PREFIX="$BREW" \
+  OBD_CLAUDE_HOME="$D$FIX/fake-home/.claude" \
+  OBD_CLAUDE_SHARE="$CLD" \
+  OBD_CLAUDE_LAUNCHER="$D$FIX/fake-home/.local/bin/claude" \
+  OBD_OPENCODE_HOME="$D$FIX/fake-home/.opencode" \
+  OBD_OPENCODE_CONFIG="$D$FIX/fake-home/.config/opencode" \
+  OBD_OPENCODE_SHARE="$D$FIX/fake-home/.local/share/opencode" \
+  OBD_OPENCODE_STATE="$D$FIX/fake-home/.local/state/opencode" \
   bash "$HERE/scripts/verify.sh" --manifest "$TMP/m/manifest.env" --skip-cli-symlink --allow-offline 2>&1)"; vrc=$?
 assert_exit "$vrc" "0" "verify.sh passes on restored tree"
 assert_contains "$vout" "all" "verify output sane"
@@ -96,6 +120,13 @@ OBD_OLLAMA_APP="$APPD" \
   OBD_OLLAMA_HOME="$OHOMED" \
   OBD_PI_HOME="$PID" \
   OBD_BREW_PREFIX="$BREW" \
+  OBD_CLAUDE_HOME="$D$FIX/fake-home/.claude" \
+  OBD_CLAUDE_SHARE="$CLD" \
+  OBD_CLAUDE_LAUNCHER="$D$FIX/fake-home/.local/bin/claude" \
+  OBD_OPENCODE_HOME="$D$FIX/fake-home/.opencode" \
+  OBD_OPENCODE_CONFIG="$D$FIX/fake-home/.config/opencode" \
+  OBD_OPENCODE_SHARE="$D$FIX/fake-home/.local/share/opencode" \
+  OBD_OPENCODE_STATE="$D$FIX/fake-home/.local/state/opencode" \
   bash "$HERE/scripts/verify.sh" --manifest "$TMP/m/manifest.env" --skip-cli-symlink --allow-offline >/dev/null 2>&1 || rc4=$?
 assert_exit "$rc4" "1" "verify.sh fails when models missing"
 

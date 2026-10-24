@@ -13,6 +13,14 @@ home/.ollama/               per-entry links: config.json, id_ed25519*, models/, 
 home/.pi/agent/             per-entry: bin/, install/{current-version,managed-install.json,releases/},
                             auth.json, models*.json, settings.json, sessions/, npm/
                             (install/staging never)
+home/.local/share/claude/   Claude Code versioned runtime (self-contained binaries)
+home/.claude/               Claude data: settings, sessions, backups (whole dir, < 1 MB)
+home/.opencode/             OpenCode binary + plugin node_modules (needed for offline reinstall)
+home/.config/opencode/      OpenCode config slice (opencode.jsonc, plugin node_modules) — ~/.config
+                            holds other apps, so this is a selective entry
+home/.local/share/opencode/ OpenCode session db (SQLite), snapshots, repos, logs
+home/.local/state/opencode/ OpenCode state: model.json, prompt-history.jsonl
+home-shell/                 shell rc files (real copies): .zshrc, .zprofile, … — PATH wiring
 app-support/Ollama/         ~/Library/Application Support/Ollama (db.sqlite etc.)
 brew/Cellar/<formula>/      node + its dep chain (brew mode only)
 brew/bin-entries.txt        "<name>\t<relative-target>" for each brew bin symlink captured
@@ -26,6 +34,9 @@ project/                    copy of scripts/, webapp/, llm-wiki/, docs/, README,
 Identity: `OBD_VERSION, CREATED_UTC, HOSTNAME, ARCH, MACOS_VERSION`
 Ollama: `OLLAMA_APP_PATH, OLLAMA_HOME_PATH, OLLAMA_APP_SUPPORT_PATH, OLLAMA_VERSION`
 Pi: `PI_HOME_PATH, PI_LAUNCHER_PATH, PI_VERSION`
+Claude: `CLAUDE_HOME_PATH, CLAUDE_SHARE_PATH, CLAUDE_LAUNCHER_PATH, CLAUDE_LAUNCHER_TARGET, CLAUDE_VERSION`
+OpenCode: `OPENCODE_HOME_PATH, OPENCODE_CONFIG_PATH, OPENCODE_SHARE_PATH, OPENCODE_STATE_PATH, OPENCODE_VERSION`
+Shell: `SHELL_RCS (space list of captured rc names)`
 Node: `NODE_MODE (brew|system|none), NODE_VERSION, NODE_REAL, NODE_FORMULAE (space list), BREW_PREFIX,
 OPT_<SANITIZED_FORMULA>="../Cellar/<f>/<ver>" (one per formula)`
 Content: `MODELS_COUNT, INCLUDE_LOGS, INCLUDE_NODE_DIST, EXCLUDE_MODELS, COMPRESS_LEVEL,

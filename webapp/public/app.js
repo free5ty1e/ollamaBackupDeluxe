@@ -1,6 +1,94 @@
-/* Ollama Backup Deluxe — UI logic (no dependencies) */
+/* Ollama Backup Deluxe — UI logic (no dependencies).
+ * Runs in three modes (auto-detected at startup):
+ *  - local:    same origin as the engine (server.js)          → full function
+ *  - remote:   hosted elsewhere (GitHub Pages) but the local
+ *              engine allows this origin via OBD_ALLOWED_ORIGIN → full function
+ *  - guide:    static copy with no engine reachable             → setup walkthrough
+ */
 'use strict';
 const $ = (id) => document.getElementById(id);
+const API_BASE = (typeof OBD_API_BASE !== 'undefined') ? OBD_API_BASE : '';
+const LOCAL_ENGINES = ['http://127.0.0.1:8686', 'http://localhost:8686'];
+let ENGINE_MODE = 'detecting';   // local | remote | guide
+let engineProbeTimer = null;
+
+function pagesBootstrapUrl() {
+  // bootstrap.sh lives at the Pages site root (same place as index.html)
+  return location.origin + location.pathname.replace(/\/[^/]*$/, '/') + 'bootstrap.sh';
+}
+
+function repoUrl() {
+  if (typeof OBD_REPO_URL !== 'undefined' && OBD_REPO_URL) return OBD_REPO_URL;
+  // project Pages: https://owner.github.io/repo/… → derive; custom domains: give up gracefully
+  const h = location.hostname;
+  if (h.endsWith('.github.io') && location.pathname.split('/')[1]) {
+    return `https://github.com/${h.split('.')[0]}/${location.pathname.split('/')[1]}`;
+  }
+  return null;
+}
+
+async function probeEngine(base) {
+  try {
+    const r = await fetch(base + 'api/system', { headers: { Accept: 'application/json' } });
+    if (!r.ok) return false;
+    const j = await r.json();
+    return !!(j && j.components);
+  } catch { return false; }
+}
+
+async function resolveEngine() {
+  if (await probeEngine('')) { setEngineMode('local', ''); return; }
+  if (!/^(127\.0\.0\.1|localhost)$/.test(location.hostname)) {
+    for (const base of LOCAL_ENGINES) {
+      if (await probeEngine(base + '/')) { setEngineMode('remote', base); return; }
+    }
+  }
+  setEngineMode('guide', '');
+}
+
+function setEngineMode(mode, base) {
+  ENGINE_MODE = mode;
+  window.__API_BASE = base;
+  if (engineProbeTimer) { clearInterval(engineProbeTimer); engineProbeTimer = null; }
+  if (mode === 'guide') {
+    showGuide();
+    $('btn-backup').disabled = $('btn-restore').disabled = true;
+    engineProbeTimer = setInterval(resolveEngine, 8000);  // auto-connect once the user starts the app
+  } else {
+    hideGuide();
+    $('btn-backup').disabled = $('btn-restore').disabled = false;
+    if (mode === 'remote') showConnectedBanner(base);
+    refreshSystem();
+  }
+}
+
+function showGuide() {
+  const g = $('guide-panel');
+  if (!g) return;
+  g.classList.remove('hidden');
+  const ru = repoUrl();
+  const dl = document.getElementById('guide-download');
+  if (dl) {
+    if (ru) { dl.href = ru + '/releases/latest'; dl.classList.remove('hidden'); }
+    else dl.classList.add('hidden');
+  }
+  const originLine = document.getElementById('guide-origin');
+  if (originLine) originLine.textContent = location.origin;
+  const one = document.getElementById('guide-oneliner');
+  if (one) one.textContent = `curl -fsSL ${pagesBootstrapUrl()} | bash`;
+  refreshSystem();
+}
+
+function hideGuide() { const g = $('guide-panel'); if (g) g.classList.add('hidden'); }
+
+function showConnectedBanner(base) {
+  const b = $('connected-banner');
+  if (!b) return;
+  b.classList.remove('hidden');
+  $('connected-host').textContent = base.replace(/\/$/, '');
+  hideGuide();
+}
+
 const humanSize = (kb) => {
   if (kb == null) return '—';
   let b = kb * 1024, u = ['B', 'KB', 'MB', 'GB', 'TB'], i = 0;
@@ -9,7 +97,8 @@ const humanSize = (kb) => {
 };
 
 async function api(path, opts) {
-  const r = await fetch(path, opts);
+  const base = window.__API_BASE || API_BASE || '';
+  const r = await fetch(base + path, opts);
   const body = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(body.error || `HTTP ${r.status}`);
   return body;
@@ -27,6 +116,8 @@ async function refreshSystem() {
       pill(c.sevenZip.present, `7-Zip ${c.sevenZip.present ? '✓' : 'missing — run prerequisites'}`) +
       pill(c.ollamaApp.present, `Ollama ${c.ollamaApp.version || (c.ollamaApp.present ? '✓' : '✗')}`) +
       pill(c.pi.present, `Pi ${c.pi.version || (c.pi.present ? '✓' : '✗')}`) +
+      pill(c.claude.present, `Claude ${c.claude.version || (c.claude.present ? '✓' : '—')}`) +
+      pill(c.opencode.present, `OpenCode ${c.opencode.version || (c.opencode.present ? '✓' : '—')}`) +
       pill(true, `Node ${c.node.version}`) +
       pill(!!s.modelCount, `${s.modelCount} models · ${humanSize(c.ollamaHome.sizeKb)}`);
     const item = (title, detail) => `<div class="sysitem"><b>${title}</b><span class="muted">${detail || '—'}</span></div>`;
@@ -35,11 +126,19 @@ async function refreshSystem() {
       item('Ollama data', `${c.ollamaHome.path} (${humanSize(c.ollamaHome.sizeKb)})`) +
       item('Ollama app data', `${c.ollamaAppSupport.path} ${c.ollamaAppSupport.present ? '' : '(not found)'}`) +
       item('Pi', `${c.pi.version || '?'} — ${c.pi.path}`) +
+      item('Claude Code', `${c.claude.version || (c.claude.present ? 'present' : 'not installed')} — ${c.claude.home}`) +
+      item('OpenCode', `${c.opencode.version || (c.opencode.present ? 'present' : 'not installed')} — ${c.opencode.home}`) +
       item('Node', `${c.node.version} (${s.arch})`) +
       item('7-Zip', c.sevenZip.present ? c.sevenZip.path : 'missing — click Cancel & run scripts/prerequisites.sh') +
       item('Free disk (project volume)', humanSize(s.diskFreeKb)) +
       item('Project', s.project);
-  } catch (e) { $('system-pills').innerHTML = `<span class="pill bad">API error: ${e.message}</span>`; }
+  } catch (e) {
+    if (ENGINE_MODE === 'guide') {
+      $('system-pills').innerHTML = '<span class="pill idle">static copy — no engine connected</span>';
+    } else {
+      $('system-pills').innerHTML = `<span class="pill bad">API error: ${e.message}</span>`;
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -79,7 +178,11 @@ async function pollJob() {
 $('btn-cancel').onclick = async () => { try { await api('/api/job/cancel', { method: 'POST' }); } catch {} };
 $('btn-refresh').onclick = refreshSystem;
 $('btn-backup').onclick = () => openModal('modal-backup');
+$('btn-validate').onclick = () => openModal('modal-validate');
 $('btn-restore').onclick = () => { $('rs-info').classList.add('hidden'); $('rs-start').disabled = true; openModal('modal-restore'); };
+$('rs-mode').addEventListener('change', () => {
+  $('rs-dc-extra').classList.toggle('hidden', $('rs-mode').value !== 'devcontainer');
+});
 
 // ---------------------------------------------------------------------------
 // Modals
@@ -102,7 +205,10 @@ $('bk-start').onclick = async () => {
     filename: $('bk-name').value.trim() || undefined,
     level: Number($('bk-level').value),
     includeNodeDist: $('bk-nodedist').checked,
+    devcontainerKit: $('bk-dc').checked,
+    validate: $('bk-validate').checked,
     includeLogs: $('bk-logs').checked,
+    stagingDir: $('bk-staging') ? $('bk-staging').value.trim() || undefined : undefined,
   };
   try {
     await api('/api/backup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -142,12 +248,31 @@ async function loadArchiveInfo() {
 }
 $('rs-start').onclick = async () => {
   const archive = $('rs-archive').value.trim();
-  if (!confirm(`Restore this machine from:\n${archive}\n\nExisting installs will be moved aside. Continue?`)) return;
+  const mode = $('rs-mode').value;
+  const target = mode === 'devcontainer'
+    ? `Linux devcontainer (toolset only, OLLAMA_HOST=${$('rs-host').value.trim()})`
+    : 'this machine (full restore incl. models)';
+  if (!confirm(`Restore ${target} from:\n${archive}\n\nExisting installs will be moved aside. Continue?`)) return;
   try {
-    await api('/api/restore', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ archive }) });
+    const body = { archive, mode, validateBefore: $('rs-validate').checked };
+    if (mode === 'devcontainer') body.ollamaHost = $('rs-host').value.trim() || undefined;
+    await api('/api/restore', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     closeModal('modal-restore');
-    showJob('Restore in progress');
+    showJob(mode === 'devcontainer' ? 'Devcontainer restore in progress' : 'Restore in progress');
   } catch (e) { alert(`Could not start restore: ${e.message}`); }
+};
+
+// ---------------------------------------------------------------------------
+// Validate flow
+// ---------------------------------------------------------------------------
+$('va-start').onclick = async () => {
+  const archive = $('va-archive').value.trim();
+  if (!archive.toLowerCase().endsWith('.7z')) { alert('Pick a .7z backup kit first.'); return; }
+  try {
+    await api('/api/validate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ archive }) });
+    closeModal('modal-validate');
+    showJob('Validating backup kit');
+  } catch (e) { alert(`Could not start validation: ${e.message}`); }
 };
 
 // ---------------------------------------------------------------------------
@@ -173,7 +298,9 @@ async function browse(path) {
     $('ex-path').value = r.path;
     exState.here = r.path; exState.parent = r.parent;
     exState.selected = null;
-    $('ex-select').disabled = exState.mode === 'dir';
+    // dir mode: the browsed location IS the selection — button is always usable
+    // file mode: enabled once a file row is selected
+    $('ex-select').disabled = exState.mode === 'dir' ? false : true;
     list.innerHTML = r.entries.length ? '' : '<div class="ex-empty">Empty folder</div>';
     if (r.parent) {
       const up = document.createElement('div');
@@ -212,4 +339,14 @@ $('ex-up').onclick = () => browse(exState.parent || exState.here);
 $('ex-path').addEventListener('keydown', (e) => { if (e.key === 'Enter') browse($('ex-path').value.trim()); });
 
 // ---------------------------------------------------------------------------
-refreshSystem();
+resolveEngine();
+
+// Guide: copy the one-command setup to the clipboard
+document.addEventListener('click', (e) => {
+  if (e.target && e.target.id === 'guide-copy') {
+    const cmd = ($('guide-oneliner') || {}).textContent || '';
+    navigator.clipboard.writeText(cmd).then(
+      () => { e.target.textContent = 'Copied ✓'; setTimeout(() => { e.target.textContent = 'Copy command'; }, 2000); },
+      () => { /* clipboard denied — user selects manually */ });
+  }
+});

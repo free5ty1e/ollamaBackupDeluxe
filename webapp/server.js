@@ -16,6 +16,10 @@ const PUBLIC = path.join(__dirname, 'public');
 const LOG_DIR = path.join(PROJECT_DIR, 'logs');
 const PORT = Number(process.env.OBD_PORT || 8686);
 const HOST = '127.0.0.1';
+// Opt-in cross-origin engine access: set OBD_ALLOWED_ORIGIN to the Pages origin
+// (e.g. https://free5ty1e.github.io) to let the hosted UI drive this local engine.
+// Never set it to '*'. Unset = same-origin only.
+const ALLOWED_ORIGIN = process.env.OBD_ALLOWED_ORIGIN || '';
 
 fs.mkdirSync(LOG_DIR, { recursive: true });
 
@@ -87,7 +91,20 @@ async function apiSystem() {
   let piVersion = null;
   const piBin = path.join(piHome, 'agent/bin/pi');
   if (exists(piBin)) { const r = await sh(piBin, ['--version']); piVersion = r.err ? 'present' : r.stdout.trim().split('\n')[0]; }
-  let nodeVersion = process.version; // server itself runs on node; report separately if system node differs? keep simple
+  let nodeVersion = process.version;
+  const opencodeHome = path.join(home, '.opencode');
+  const claudeShare = path.join(home, '.local/share/claude');
+  const claudeLauncher = path.join(home, '.local/bin/claude');
+  let opencodeVersion = null;
+  if (exists(path.join(opencodeHome, 'bin/opencode'))) {
+    const r = await sh(path.join(opencodeHome, 'bin/opencode'), ['--version']);
+    opencodeVersion = r.err ? 'present' : r.stdout.trim().split('\n')[0];
+  }
+  let claudeVersion = null;
+  if (exists(claudeLauncher)) {
+    const r = await sh(claudeLauncher, ['--version']);
+    claudeVersion = r.err ? 'present' : (r.stdout.trim().split(' ')[0] || 'present');
+  }
   const models = await sh('/usr/bin/find', [path.join(ollamaHome, 'models'), '-type', 'f', '-path', '*manifests*'], { timeout: 30000 });
   const modelCount = models.err ? 0 : models.stdout.split('\n').filter(l => l.includes('/manifests/') && !l.endsWith('/manifests')).length;
   const df = await sh('/bin/df', ['-k', PROJECT_DIR]);
@@ -100,6 +117,8 @@ async function apiSystem() {
       ollamaAppSupport: { path: appSupport, present: isDir(appSupport) },
       pi: { path: piHome, present: isDir(piHome), version: piVersion, sizeKb: piKb },
       node: { version: nodeVersion },
+      claude: { home: claudeShare, present: isDir(claudeShare), version: claudeVersion },
+      opencode: { home: opencodeHome, present: isDir(opencodeHome), version: opencodeVersion },
       sevenZip: { path: seven, present: !!seven },
     },
     modelCount, diskFreeKb: freeKb,
@@ -160,7 +179,8 @@ let job = null;
 function startJob(type, args) {
   if (job && job.status === 'running') return { error: 'another job is already running' };
   const id = Date.now().toString(36);
-  const script = type === 'backup' ? 'backup.sh' : type === 'restore' ? 'restore.sh' : 'prerequisites.sh';
+  const script = { backup: 'backup.sh', restore: 'restore.sh', 'restore-devcontainer': 'restore-devcontainer.sh',
+    validate: 'validate-backup.sh', prereqs: 'prerequisites.sh' }[type] || 'prerequisites.sh';
   const logFile = path.join(LOG_DIR, `${new Date().toISOString().replace(/[:.]/g, '-')}-${type}.log`);
   const child = spawn('/bin/bash', [path.join(SCRIPTS, script), ...args], {
     env: { ...process.env, OBD_NONINTERACTIVE: '1' }, cwd: PROJECT_DIR,
@@ -196,6 +216,18 @@ function startJob(type, args) {
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${HOST}:${PORT}`);
   const p = url.pathname;
+  if (ALLOWED_ORIGIN && p.startsWith('/api/')) {
+    res.setHeader('Access-Control-Allow-Origin', ALLOWED_ORIGIN);
+    res.setHeader('Vary', 'Origin');
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204, {
+        'Access-Control-Allow-Methods': 'GET, POST',
+        'Access-Control-Allow-Headers': 'Content-Type, Accept',
+        'Access-Control-Max-Age': '600',
+      });
+      return res.end();
+    }
+  }
   try {
     if (p === '/api/system') return json(res, 200, await apiSystem());
     if (p === '/api/browse') return json(res, 200, apiBrowse(url.searchParams));
@@ -213,6 +245,15 @@ const server = http.createServer(async (req, res) => {
       if (!job || job.status !== 'running') return json(res, 400, { error: 'no running job' });
       job.cancel(); return json(res, 200, { ok: true });
     }
+    if (req.method === 'POST' && p === '/api/validate') {
+      const body = await readBody(req);
+      const archive = safePath(body.archive);
+      if (!archive || !exists(archive) || isDir(archive)) return json(res, 400, { error: 'invalid archive path' });
+      const args = ['--archive', archive];
+      if (body.quick) args.push('--quick');
+      const r = startJob('validate', args);
+      return json(res, r.error ? 409 : 200, r);
+    }
     if (req.method === 'POST' && (p === '/api/backup' || p === '/api/restore' || p === '/api/prereqs')) {
       const body = p === '/api/prereqs' ? {} : await readBody(req);
       let args = [];
@@ -225,10 +266,23 @@ const server = http.createServer(async (req, res) => {
         if (Number.isInteger(level) && level >= 0 && level <= 9) args.push('--level', String(level));
         if (body.includeNodeDist === false) args.push('--no-node-dist');
         if (body.includeLogs === false) args.push('--no-logs');
+        if (body.devcontainerKit === false) args.push('--no-devcontainer');
+        if (body.validate) args.push('--validate');
+        if (body.stagingDir && typeof body.stagingDir === 'string' && body.stagingDir.length < 500
+            && !body.stagingDir.includes('\0')) {
+          args.push('--staging-dir', body.stagingDir);
+        }
       } else if (p === '/api/restore') {
         const archive = safePath(body.archive);
         if (!archive || !exists(archive) || isDir(archive)) return json(res, 400, { error: 'invalid archive path' });
+        if (body.mode === 'devcontainer') {
+          args = ['--archive', archive, '--yes'];
+          if (body.ollamaHost) args.push('--ollama-host', String(body.ollamaHost));
+          const r = startJob('restore-devcontainer', args);
+          return json(res, r.error ? 409 : 200, r);
+        }
         args = ['--archive', archive, '--yes'];
+        if (body.validateBefore) args.push('--validate-archive');
       }
       const r = startJob(p.slice(5), args);
       return json(res, r.error ? 409 : 200, r);
