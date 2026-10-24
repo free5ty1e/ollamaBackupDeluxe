@@ -126,6 +126,22 @@ links during compression, so there is no giant temp folder. The tiny staging tre
 manifest + embedded tool copy) defaults to the system temp dir; pin it with
 `--staging-dir <dir>` or the web app's "Advanced" field.
 
+## Testbed rehearsal (purge a machine, then restore)
+
+To rehearse the full offline restore on a machine that already has the stack, purge everything
+the restore installs first:
+
+```bash
+scripts/testbed-purge.sh            # dry-run: lists exactly what would go (with sizes)
+scripts/testbed-purge.sh --yes      # PURGES: ollama (incl. all models!), pi, claude, opencode, node chain
+scripts/testbed-purge.sh --audit    # component audit to paste back for review
+```
+
+Scope: Ollama (app, CLI, **all model data**, app db, prefs), Pi, Claude, OpenCode (all dirs incl.
+caches), and the Homebrew node chain (`brew uninstall --zap node + deps`, or direct removal).
+NOT touched: Homebrew itself, other formulae, other `~/.config` apps, shell rc files, user docs.
+Requires a validated backup kit first — this is a one-way door.
+
 ## Validating a backup kit
 
 `scripts/validate-backup.sh --archive <kit>.7z` proves a kit without restoring: sha256 vs

@@ -103,3 +103,13 @@ Append-only. Format: `## [YYYY-MM-DD] <op> | <title>` — parseable with
 - Directional live comparison: kit extras = advisory (Ollama pruned manifests-v2 after the
   user's backup — real observation), kit missing live pulls = fail.
 - Tests: 202 green (test-validate: 19 checks incl. corrupt/truncated/mismatch/non-OBD kits).
+
+## [2026-10-12] build | testbed-purge.sh — M1 Max rehearsal prep
+- scripts/testbed-purge.sh: dry-run (sizes), --yes (typed PURGE confirmation), --audit
+  (component/version audit to paste back for review). Scope: ollama app/CLI/data/db/prefs,
+  pi, claude, opencode (all dirs incl caches), node chain via `brew uninstall --zap node+deps`
+  or direct Cellar/opt/lib removal; guard ensures brew commands only run when the OBD prefix
+  matches the real brew prefix (never in sandbox tests). Shell rcs + unrelated apps untouched.
+- tests/unit/test-testbed-purge.sh: 36 checks (dry-run, audit, purge completeness, survive-list).
+- Suite: 238 green. Ready for the M1 rehearsal: commit → tag v0.0.5-alpha01 → release CI →
+  USB (exFAT!) with bundle + kit → airplane mode → purge → audit → restore → verify.
